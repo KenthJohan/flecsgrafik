@@ -10,9 +10,8 @@
 #include "csc/csc_xlog.h"
 #include "csc/csc_gft.h"
 #include "csc/experiment/gtext1.h"
-#include "csc/experiment/gtext2.h"
 
-//#include "api.h"
+#include "rect.h"
 
 
 #include <SDL2/SDL.h>
@@ -81,9 +80,11 @@ int main (int argc, char * argv[])
 	glDepthFunc(GL_LEQUAL);
 	glDepthRange(0.0f, 1.0f);
 
+	/*
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 	glFrontFace(GL_CW);
+	*/
 
 	struct csc_gcam cam;
 	csc_gcam_init (&cam);
@@ -103,8 +104,16 @@ int main (int argc, char * argv[])
 	tctx.program = csc_gl_program_from_files1 (CSC_SRCDIR"shader_text.glfs;"CSC_SRCDIR"shader_text.glvs");
 	tctx.ft = ft;
 	gtext1_setup (&tctx);
+
+
+	struct rect_context rctx;
+	rctx.count = 1000;
+	rctx.program = csc_gl_program_from_files1 (CSC_SRCDIR"shader_triangle.glfs;"CSC_SRCDIR"shader_triangle.glvs");
+	rect_setup (&rctx);
+
 	GLint mvp = glGetUniformLocation(tctx.program, "mvp");
 	ASSERT (mvp >= 0);
+
 
 
 
@@ -123,7 +132,7 @@ int main (int argc, char * argv[])
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-		if(0)
+		if(1)
 		{
 			//Control graphics camera
 			csc_sdl_motion_wasd (keyboard, &cam.d);
@@ -152,9 +161,6 @@ int main (int argc, char * argv[])
 		}
 
 		{
-			m4f32 m = M4F32_IDENTITY;
-			glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
-			//glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
 			gtext1_draw (&tctx, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, "123456");
 			gtext1_draw (&tctx, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
 			gtext1_draw (&tctx, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
@@ -167,7 +173,27 @@ int main (int argc, char * argv[])
 		}
 
 
-		gtext1_glflush (&tctx);
+		{
+			rect_draw_rect (&rctx, 0.0f, 0.0f, 1.1f, 1.1f);
+		}
+
+
+		{
+			m4f32 m;
+
+			glUseProgram (tctx.program);
+			m = (m4f32)M4F32_IDENTITY;
+			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
+			glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
+			gtext1_glflush (&tctx);
+
+
+			glUseProgram (rctx.program);
+			m = (m4f32)M4F32_IDENTITY;
+			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
+			glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
+			rect_glflush (&rctx);
+		}
 
 
 		SDL_Delay (10);
