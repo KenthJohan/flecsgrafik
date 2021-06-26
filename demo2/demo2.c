@@ -9,6 +9,8 @@
 #include "csc/csc_sdlglew.h"
 #include "csc/csc_xlog.h"
 #include "csc/csc_gft.h"
+#include "csc/experiment/gtext1.h"
+#include "csc/experiment/gtext2.h"
 
 //#include "api.h"
 
@@ -21,7 +23,6 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include "text.h"
 
 #define WIN_X SDL_WINDOWPOS_UNDEFINED
 #define WIN_Y SDL_WINDOWPOS_UNDEFINED
@@ -96,12 +97,12 @@ int main (int argc, char * argv[])
 		exit(1);
 	}
 
-	struct text_context tctx;
+	struct gtext1_context tctx;
 	tctx.maxchars = 1000;
 	tctx.filename = CSC_SRCDIR"consola.ttf";
 	tctx.program = csc_gl_program_from_files1 (CSC_SRCDIR"shader_text.glfs;"CSC_SRCDIR"shader_text.glvs");
 	tctx.ft = ft;
-	text_setup (&tctx);
+	gtext1_setup (&tctx);
 	GLint mvp = glGetUniformLocation(tctx.program, "mvp");
 	ASSERT (mvp >= 0);
 
@@ -154,19 +155,19 @@ int main (int argc, char * argv[])
 			m4f32 m = M4F32_IDENTITY;
 			glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
 			//glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
-			text_draw (&tctx, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, "123456");
-			text_draw (&tctx, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			text_draw (&tctx, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			text_draw (&tctx, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			text_draw (&tctx, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			text_draw (&tctx, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			text_draw (&tctx, -1.0f, 0.6f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			text_draw_format (&tctx, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %f", 1.0/s);
-			text_draw_format (&tctx, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %f", s*1000.0);
+			gtext1_draw (&tctx, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, "123456");
+			gtext1_draw (&tctx, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			gtext1_draw (&tctx, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			gtext1_draw (&tctx, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			gtext1_draw (&tctx, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			gtext1_draw (&tctx, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			gtext1_draw (&tctx, -1.0f, 0.6f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			gtext1_draw_format (&tctx, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %f", 1.0/s);
+			gtext1_draw_format (&tctx, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %f", s*1000.0);
 		}
 
 
-		text_glflush (&tctx);
+		gtext1_glflush (&tctx);
 
 
 		SDL_Delay (10);
