@@ -31,7 +31,25 @@
 
 
 
+Uint64 main_profile0[10];
+Uint64 main_profile1[10];
+void main_profile_start(int i)
+{
+	main_profile0[i] = SDL_GetPerformanceCounter();
+}
 
+double main_profile_stop_s(int i)
+{
+	Uint64 end = SDL_GetPerformanceCounter();
+	Uint64 d = (end - main_profile0[i]);
+	//Moving average:
+	Uint64 denominator = 100;
+	uint64_t numerator = 90;
+	Uint64 d1 = numerator * main_profile1[i] / denominator;
+	Uint64 d2 = (denominator - numerator) * d / denominator;
+	main_profile1[i] = d1 + d2;
+	return  main_profile1[i] / (double)SDL_GetPerformanceFrequency();
+}
 
 
 
@@ -79,6 +97,7 @@ int main (int argc, char * argv[])
 	}
 
 	struct text_context tctx;
+	tctx.maxchars = 1000;
 	tctx.filename = CSC_SRCDIR"consola.ttf";
 	tctx.program = csc_gl_program_from_files1 (CSC_SRCDIR"shader_text.glfs;"CSC_SRCDIR"shader_text.glvs");
 	tctx.ft = ft;
@@ -88,12 +107,11 @@ int main (int argc, char * argv[])
 
 
 
-
-
-
-
+	double s;
 	while (main_flags & CSC_SDLGLEW_RUNNING)
 	{
+		main_profile_start(0);
+
 		SDL_Event event;
 		while (SDL_PollEvent (&event))
 		{
@@ -104,6 +122,7 @@ int main (int argc, char * argv[])
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
+		if(0)
 		{
 			//Control graphics camera
 			csc_sdl_motion_wasd (keyboard, &cam.d);
@@ -131,13 +150,28 @@ int main (int argc, char * argv[])
 			csc_gcam_update (&cam);
 		}
 
-		glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
-		text_draw (&tctx, "Hello", 0.0f, 0.0f, 0.01f, 0.01);
+		{
+			m4f32 m = M4F32_IDENTITY;
+			glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
+			//glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
+			text_draw (&tctx, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, "123456");
+			text_draw (&tctx, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			text_draw (&tctx, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			text_draw (&tctx, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			text_draw (&tctx, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			text_draw (&tctx, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			text_draw (&tctx, -1.0f, 0.6f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			text_draw_format (&tctx, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %f", 1.0/s);
+			text_draw_format (&tctx, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %f", s*1000.0);
+		}
 
+
+		text_glflush (&tctx);
 
 
 		SDL_Delay (10);
 		SDL_GL_SwapWindow (window);
+		s = main_profile_stop_s(0);
 	}
 
 	SDL_GL_DeleteContext (context);

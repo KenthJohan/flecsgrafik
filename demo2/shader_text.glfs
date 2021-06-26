@@ -8,7 +8,7 @@ uniform sampler2D tex0;
 void main()
 {
 	float a = texture2D(tex0, texpos).a;
-	fragcolor = vec4(1, 1, 1, a);
+	fragcolor = vec4(a, a, a, 1);
 	
 	//fragcolor += vec4(1,1,1,1);
 }
