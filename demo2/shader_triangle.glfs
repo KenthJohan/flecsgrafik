@@ -1,8 +1,12 @@
 #version 330 core
 
 out vec4 fragcolor;
+in vec2 texpos;
+
+uniform sampler2D tex0;
 
 void main()
 {
-	fragcolor = vec4(1, 1, 1, 1);
+	float a = texture2D(tex0, texpos).a;
+	fragcolor = vec4(a, a, a, 1);
 }

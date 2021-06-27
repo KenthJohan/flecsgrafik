@@ -12,6 +12,7 @@
 #include "csc/experiment/gtext1.h"
 
 #include "rect.h"
+#include "plot.h"
 
 
 #include <SDL2/SDL.h>
@@ -44,7 +45,7 @@ double main_profile_stop_s(int i)
 	Uint64 d = (end - main_profile0[i]);
 	//Moving average:
 	Uint64 denominator = 100;
-	uint64_t numerator = 90;
+	uint64_t numerator = 1;
 	Uint64 d1 = numerator * main_profile1[i] / denominator;
 	Uint64 d2 = (denominator - numerator) * d / denominator;
 	main_profile1[i] = d1 + d2;
@@ -193,6 +194,22 @@ int main (int argc, char * argv[])
 			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
 			glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
 			rect_glflush (&rctx);
+		}
+
+
+		{
+			static uint8_t i = 0;
+			static uint8_t data[256] = {0};
+			glBindTexture (GL_TEXTURE_2D, rctx.tex);
+			int w = 256;
+			int h = 256;
+			GLint xoffset = 0;
+			GLint yoffset = 0;
+			uint8_t buffer[256*256] = {0x11, 0x22, 0x33, 0x44};
+			plot_u8 (buffer, w, h, data, 256);
+			glTexSubImage2D (GL_TEXTURE_2D, 0, xoffset, yoffset, w, h, GL_ALPHA, GL_UNSIGNED_BYTE, buffer);
+			data[i] = s*1000;
+			i++;
 		}
 
 
