@@ -6,7 +6,6 @@
 #include <GL/glew.h>
 #include "csc/csc_debug.h"
 #include "csc/csc_gft.h"
-#include "plot.h"
 
 
 
@@ -88,11 +87,20 @@ static void rect_draw_rect (struct rect_context * ctx, float x, float y, float w
 	ASSERT (glIsVertexArray(ctx->vao));
 	ASSERT (glIsBuffer(ctx->vbo));
 	ASSERT_NOTNULL (ctx->v);
-	float * pos = ctx->v + 0;
-	float * uv = ctx->v + 2;
+	float * pos = ctx->v + ctx->last * 4 * 3 + 0;
+	float * uv = ctx->v + ctx->last * 4 * 3 + 2;
 	gft_trianglemesh2 (&pos, stride, x, y, w, h);
 	gft_trianglemesh2 (&uv, stride, 0, 0, 1, 1);
 	ctx->last += 2;
+}
+
+
+static void rect_draw_rect1 (struct rect_context * ctx, float x, float y, float w, float h)
+{
+	rect_draw_rect (ctx,      x,     y,  0.1f,    h);
+	rect_draw_rect (ctx,      x,     y,     w, 0.1f);
+	rect_draw_rect (ctx,  x + w,     y,  0.1f,    h);
+	rect_draw_rect (ctx,      x, y + h,     w, 0.1f);
 }
 
 

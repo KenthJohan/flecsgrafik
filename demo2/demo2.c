@@ -9,10 +9,12 @@
 #include "csc/csc_sdlglew.h"
 #include "csc/csc_xlog.h"
 #include "csc/csc_gft.h"
+#include "csc/csc_pixmap.h"
 #include "csc/experiment/gtext1.h"
 
 #include "rect.h"
-#include "plot.h"
+
+#include "gui_profiler.h"
 
 
 #include <SDL2/SDL.h>
@@ -32,25 +34,9 @@
 
 
 
-Uint64 main_profile0[10];
-Uint64 main_profile1[10];
-void main_profile_start(int i)
-{
-	main_profile0[i] = SDL_GetPerformanceCounter();
-}
 
-double main_profile_stop_s(int i)
-{
-	Uint64 end = SDL_GetPerformanceCounter();
-	Uint64 d = (end - main_profile0[i]);
-	//Moving average:
-	Uint64 denominator = 100;
-	uint64_t numerator = 1;
-	Uint64 d1 = numerator * main_profile1[i] / denominator;
-	Uint64 d2 = (denominator - numerator) * d / denominator;
-	main_profile1[i] = d1 + d2;
-	return  main_profile1[i] / (double)SDL_GetPerformanceFrequency();
-}
+
+
 
 
 
@@ -116,12 +102,13 @@ int main (int argc, char * argv[])
 	ASSERT (mvp >= 0);
 
 
+	struct gui_profiler gprofiler;
 
 
-	double s;
 	while (main_flags & CSC_SDLGLEW_RUNNING)
 	{
-		main_profile_start(0);
+		//main_profile_start(0);
+		gui_profiler_start (&gprofiler);
 
 		SDL_Event event;
 		while (SDL_PollEvent (&event))
@@ -169,15 +156,10 @@ int main (int argc, char * argv[])
 			gtext1_draw (&tctx, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
 			gtext1_draw (&tctx, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
 			gtext1_draw (&tctx, -1.0f, 0.6f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			gtext1_draw_format (&tctx, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %f", 1.0/s);
-			gtext1_draw_format (&tctx, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %f", s*1000.0);
-		}
-
-
-		{
 			rect_draw_rect (&rctx, 0.0f, 0.0f, 1.1f, 1.1f);
+			//rect_draw_rect1 (&rctx, 0.0f, 0.0f, 1.1f, 1.1f);
+			gui_profiler_draw (&gprofiler, &rctx, &tctx);
 		}
-
 
 		{
 			m4f32 m;
@@ -188,7 +170,6 @@ int main (int argc, char * argv[])
 			glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
 			gtext1_glflush (&tctx);
 
-
 			glUseProgram (rctx.program);
 			m = (m4f32)M4F32_IDENTITY;
 			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
@@ -197,25 +178,12 @@ int main (int argc, char * argv[])
 		}
 
 
-		{
-			static uint8_t i = 0;
-			static uint8_t data[256] = {0};
-			glBindTexture (GL_TEXTURE_2D, rctx.tex);
-			int w = 256;
-			int h = 256;
-			GLint xoffset = 0;
-			GLint yoffset = 0;
-			uint8_t buffer[256*256] = {0x11, 0x22, 0x33, 0x44};
-			plot_u8 (buffer, w, h, data, 256);
-			glTexSubImage2D (GL_TEXTURE_2D, 0, xoffset, yoffset, w, h, GL_ALPHA, GL_UNSIGNED_BYTE, buffer);
-			data[i] = s*1000;
-			i++;
-		}
+
 
 
 		SDL_Delay (10);
 		SDL_GL_SwapWindow (window);
-		s = main_profile_stop_s(0);
+		gui_profiler_end (&gprofiler);
 	}
 
 	SDL_GL_DeleteContext (context);
