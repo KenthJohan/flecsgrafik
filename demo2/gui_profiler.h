@@ -10,12 +10,6 @@
 #include "csc/experiment/gtext1.h"
 
 
-#include "rect.h"
-
-
-
-
-
 
 #define GUI_PROFILER_HCOUNT 256
 struct gui_profiler
@@ -44,20 +38,25 @@ static void gui_profiler_end (struct gui_profiler * item)
 	//return  main_profile1[i] / (double)SDL_GetPerformanceFrequency();
 }
 
-static void gui_profiler_draw (struct gui_profiler * item, struct rect_context * rctx, struct gtext1_context * tctx)
+static void gui_profiler_draw (struct gui_profiler * item, struct glx_vertex_manager * vm, struct gtext1_context * tctx)
 {
 	double f = (double)SDL_GetPerformanceFrequency();
-	glBindTexture (GL_TEXTURE_2D, rctx->tex);
-	int w = 256;
-	int h = 256;
-	GLint xoffset = 0;
-	GLint yoffset = 0;
-	uint8_t image[256*256] = {0x11, 0x22, 0x33, 0x44};
+	//glBindTexture (GL_TEXTURE_2D, rctx->tex);
+	int w = 512;
+	int h = 512;
+	uint8_t image[512*512] = {0x11, 0x22, 0x33, 0x44};
 	csc_pixmap_plot_u8 (image, w, h, item->h, GUI_PROFILER_HCOUNT);
 	csc_pixmap_drawrect (image, w, h, item->i, 0, 1, h, 0x44);
-	glTexSubImage2D (GL_TEXTURE_2D, 0, xoffset, yoffset, w, h, GL_ALPHA, GL_UNSIGNED_BYTE, image);
+	//glTexSubImage2D (GL_TEXTURE_2D, 0, xoffset, yoffset, w, h, GL_ALPHA, GL_UNSIGNED_BYTE, image);
+	GLint xoffset = 0;
+	GLint yoffset = 0;
+	GLint zoffset = 1;
+	GLint level = 0;
+	GLsizei depth = 1;
+	glTexSubImage3D (GL_TEXTURE_2D_ARRAY, level, xoffset, yoffset, zoffset, w, h, depth, GL_RED, GL_UNSIGNED_BYTE, image);
+
 	item->h[item->i] = (item->a[0] * 1000) / f;
 	item->i++;
-	gtext1_draw_format (tctx, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %3.5f", f / item->a[0]);
-	gtext1_draw_format (tctx, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %3.5f", (item->a[0] * 1000.0) / f);
+	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %3.5f", f / item->a[0]);
+	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %3.5f", (item->a[0] * 1000.0) / f);
 }
