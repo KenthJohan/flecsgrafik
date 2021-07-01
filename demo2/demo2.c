@@ -14,6 +14,9 @@
 
 
 #include "gui_profiler.h"
+#include "glx_vertex_manager.h"
+#include "glx_texture_manager.h"
+#include "text.h"
 
 
 #include <SDL2/SDL.h>
@@ -30,55 +33,6 @@
 #define WIN_W 640
 #define WIN_H 480
 #define WIN_TITLE "Demo2"
-
-
-
-
-struct glx_texture_manager
-{
-	uint32_t w;
-	uint32_t h;
-	uint32_t l;
-	GLuint tex[1];
-};
-
-static void glx_texture_manager_setup (struct glx_texture_manager * item)
-{
-	ASSERT_PARAM_NOTNULL (item);
-	unsigned unit = 0;
-	glActiveTexture (GL_TEXTURE0 + unit);
-	glGenTextures (1, item->tex);
-	glBindTexture (GL_TEXTURE_2D_ARRAY, item->tex[0]);
-	//glUniform1i (ctx->uniform_tex, unit);
-
-	GLsizei mipLevelCount = 1;
-	//glTexImage2D (GL_TEXTURE_2D_ARRAY, 0, GL_ALPHA, item->w, item->h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, 0);
-	glTexStorage3D (GL_TEXTURE_2D_ARRAY, mipLevelCount, GL_R8, item->w, item->h, item->l);
-	/* We require 1 byte alignment when uploading texture data */
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	/* Clamping to edges is important to prevent artifacts when scaling */
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	/* Linear filtering usually looks best for text */
-	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-
-	uint8_t * a = malloc(item->w * item->h);
-	for (uint32_t i = 0; i < item->w * item->h; ++i) {a[i] = i;}
-	glTexSubImage3D (GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, item->w, item->h, 1,  GL_RED, GL_UNSIGNED_BYTE, a);
-	free(a);
-}
-
-
-
-
-
-
-
-
 
 
 
@@ -125,18 +79,32 @@ int main (int argc, char * argv[])
 	const uint8_t * keyboard = SDL_GetKeyboardState (NULL);
 
 	FT_Library ft;
-	if (FT_Init_FreeType(&ft))
+	if (FT_Init_FreeType (&ft))
 	{
 		XLOG(XLOG_ERR, XLOG_FT, "Could not init FreeType Library");
 		exit(1);
 	}
 
-	struct glx_texture_manager texlist = {.w = 512, .h = 512, .l = 2};
-	glx_texture_manager_setup (&texlist);
 
+	GLint program = csc_gl_program_from_files1 (CSC_SRCDIR"shader.glfs;"CSC_SRCDIR"shader.glvs");
+	GLint uniform_tex = glGetUniformLocation (program, "tex0");
+	GLint uniform_mvp = glGetUniformLocation (program, "mvp");
+	ASSERT (uniform_tex >= 0);
+	ASSERT (uniform_mvp >= 0);
+	glUseProgram (program);
+	glUniform1i (uniform_tex, 0);
 
-	struct glx_vertex_manager vm = {.maxchars = 1000, .program = csc_gl_program_from_files1 (CSC_SRCDIR"shader.glfs;"CSC_SRCDIR"shader.glvs")};
+	struct glx_texlist texlist = {};
+	texlist.texarray[0].w = 512;
+	texlist.texarray[0].h = 512;
+	texlist.texarray[0].l = 3;
+	glx_texlist_setup (&texlist);
+	glx_texlist_gen_gradient (&texlist, 0, 2);
+
+	struct glx_vertex_manager vm = {.capacity = 1000};
 	glx_vertex_manager_setup (&vm);
+
+
 
 	struct gtext1_context tctx;
 	tctx.filename = CSC_SRCDIR"consola.ttf";
@@ -144,8 +112,7 @@ int main (int argc, char * argv[])
 	glBindTexture (GL_TEXTURE_2D_ARRAY, texlist.tex[0]);
 	gtext1_setup (&tctx);
 
-	GLint mvp = glGetUniformLocation (vm.program, "mvp");
-	ASSERT (mvp >= 0);
+
 
 
 	struct gui_profiler gprofiler;
@@ -195,24 +162,27 @@ int main (int argc, char * argv[])
 		}
 
 		{
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, "123456");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.6f, 0.1f/48.0f, 0.1f/48.0f, "ABCDEF");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "123456");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%BCDEF");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 1.6f, 0.5f/48.0f, 0.5f/48.0f, 0.0f, "ABCDEF");
 			glx_vertex_manager_drawrect (&vm, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+			glx_vertex_manager_drawrect_border (&vm, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
 			gui_profiler_draw (&gprofiler, &vm, &tctx);
 		}
+
+
 
 		{
 			m4f32 m;
 
-			glUseProgram (vm.program);
+			glUseProgram (program);
 			m = (m4f32)M4F32_IDENTITY;
 			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
-			glUniformMatrix4fv (mvp, 1, GL_FALSE, cam.mvp.m);
+			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
 			glBindTexture (GL_TEXTURE_2D_ARRAY, texlist.tex[0]);
 			glx_vertex_manager_flush (&vm);
 		}

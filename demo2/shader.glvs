@@ -1,6 +1,6 @@
 #version 330 core
 layout (location = 0) in vec2 vpos; // (x,y)
-layout (location = 1) in vec3 vuvl; // (u,v,l)
+layout (location = 1) in vec3 vuvl; // (u,v,l) //UV coordinate and texture layer
 out vec3 uvl;
 uniform mat4 mvp;
 

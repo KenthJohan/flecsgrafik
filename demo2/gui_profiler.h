@@ -7,7 +7,10 @@
 #include "csc/csc_math.h"
 #include "csc/csc_gft.h"
 #include "csc/csc_pixmap.h"
-#include "csc/experiment/gtext1.h"
+
+#include "glx_texture_manager.h"
+#include "glx_vertex_manager.h"
+#include "text.h"
 
 
 
@@ -57,6 +60,6 @@ static void gui_profiler_draw (struct gui_profiler * item, struct glx_vertex_man
 
 	item->h[item->i] = (item->a[0] * 1000) / f;
 	item->i++;
-	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, "FPS: %3.5f", f / item->a[0]);
-	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, " ms: %3.5f", (item->a[0] * 1000.0) / f);
+	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, 0, "FPS: %3.5f", f / item->a[0]);
+	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, 0, " ms: %3.5f", (item->a[0] * 1000.0) / f);
 }
