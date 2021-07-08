@@ -30,7 +30,7 @@
 #define WIN_TITLE "Demo1"
 
 
-static struct gtext_context gtext_ctx;
+
 
 
 

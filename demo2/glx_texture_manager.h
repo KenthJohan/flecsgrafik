@@ -50,10 +50,11 @@ static void glx_texarray_gen_gradient (struct glx_texarray * item, float l)
 
 
 
+#define GLX_TEXTLIST_CAPACITY 4
 struct glx_texlist
 {
-	struct glx_texarray texarray[1];
-	GLuint tex[1];
+	struct glx_texarray texarray[GLX_TEXTLIST_CAPACITY];
+	GLuint tex[GLX_TEXTLIST_CAPACITY];
 };
 
 static void glx_texlist_setup (struct glx_texlist * item)
@@ -61,7 +62,7 @@ static void glx_texlist_setup (struct glx_texlist * item)
 	ASSERT_PARAM_NOTNULL (item);
 	unsigned unit = 0;
 	glActiveTexture (GL_TEXTURE0 + unit);
-	glGenTextures (1, item->tex);
+	glGenTextures (GLX_TEXTLIST_CAPACITY, item->tex);
 	//glUniform1i (ctx->uniform_tex, unit);
 
 	glBindTexture (GL_TEXTURE_2D_ARRAY, item->tex[0]);
@@ -76,7 +77,7 @@ static void glx_texlist_setup (struct glx_texlist * item)
 static void glx_texlist_gen_gradient (struct glx_texlist * item, int index, float l)
 {
 	glBindTexture (GL_TEXTURE_2D_ARRAY, item->tex[index]);
-	glx_texarray_gen_gradient (item->texarray[index], l);
+	glx_texarray_gen_gradient (item->texarray + index, l);
 }
 
 
