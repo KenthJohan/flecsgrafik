@@ -118,8 +118,8 @@ static void sys_create_shader_fromfilename (ecs_iter_t *it)
 
 static void sys_create_program (ecs_iter_t *it)
 {
-	OpenGL_Program * program = ecs_term (it, OpenGL_Program, 1);
-	OpenGL_Shader * shader = ecs_term (it, OpenGL_Shader, 2);//Shared
+	OpenGL_Program * program = ecs_term (it, OpenGL_Program, 2);
+	OpenGL_Shader * shader = ecs_term (it, OpenGL_Shader, 1);//Shared
 	for (int i = 0; i < it->count; i ++)
 	{
 		XLOG (XLOG_INF, XLOG_GENERAL, "Add shader %i to %i", shader[0].id, program[i].id);
@@ -147,6 +147,59 @@ static void sys_freetype_face_from_filename (ecs_iter_t *it)
 			ASSERT(0);
 		}
 	}
+}
+
+static void sys_attach_shader (ecs_iter_t *it)
+{
+	ecs_world_t * world = it->world;
+	OpenGL_Shader * s = ecs_term (it, OpenGL_Shader, 1);
+	ecs_id_t id = ecs_term_id (it, 2);
+	ecs_entity_t obj = ecs_pair_object (world, id);
+	ecs_entity_t r = ecs_pair_relation (world, id);
+	printf ("id %jx\n", id);//343, 344
+	printf ("obj %jx\n", obj);//343, 344
+	printf ("name %s\n", ecs_get_name(world, obj));
+	printf ("name %s\n", ecs_get_name(world, r));
+	printf ("type %s\n", ecs_type_str(world, ecs_get_type(world, obj)));
+	printf ("type %s\n", ecs_type_str(world, ecs_get_type(world, r)));
+
+
+
+	printf ("\n");
+	for (int i = 0; i < it->count; i ++)
+	{
+		printf ("etype %s\n", ecs_type_str(world, ecs_get_type(world, it->entities[i])));
+		//printf ("%s %s %i %i\n", ecs_get_name(world, it->entities[i]), ecs_get_name(world, obj), s[i], ecs_get(world, obj, OpenGL_Program)->id);
+		//printf ("%s %s\n", ecs_get_name(world, it->entities[i]), ecs_get_name(world, obj));
+	}
+}
+
+
+static void sys_attach_shader1 (ecs_iter_t *it)
+{
+	ecs_world_t * world = it->world;
+	ecs_id_t id = ecs_term_id (it, 1);
+	ecs_entity_t o = ecs_pair_object (world, id);
+	ecs_entity_t r = ecs_pair_relation (world, id);
+	printf ("column_count: %i\n", it->column_count);
+	printf ("type: %s\n", ecs_type_str(world, it->table->types[0]));
+	printf ("type: %s\n", ecs_type_str(world, ecs_get_type(world, o)));
+	printf ("name: %s\n", ecs_get_name(world, o));
+
+	//printf ("id %jx\n", id);//343, 344
+	//printf ("obj %jx\n", obj);//343, 344
+	//printf ("name %s\n", ecs_get_name(world, obj));
+	//printf ("name %s\n", ecs_get_name(world, r));
+	//printf ("type %s\n", ecs_type_str(world, ecs_get_type(world, obj)));
+	//printf ("type %s\n", ecs_type_str(world, ecs_get_type(world, r)));
+
+	for (int i = 0; i < it->count; i ++)
+	{
+		printf ("%s: %s\n",  ecs_get_name(world, it->entities[i]), ecs_type_str(world, ecs_get_type(world, it->entities[i])));
+		//printf ("%s %s %i %i\n", ecs_get_name(world, it->entities[i]), ecs_get_name(world, obj), s[i], ecs_get(world, obj, OpenGL_Program)->id);
+		//printf ("%s %s\n", ecs_get_name(world, it->entities[i]), ecs_get_name(world, obj));
+	}
+	printf ("\n");
 }
 
 
@@ -203,6 +256,8 @@ void main_ecs_register(ecs_world_t * world)
 	ECS_COMPONENT_DEFINE (world, Freetype_Face);
 	ECS_COMPONENT_DEFINE (world, Freetype_Library);
 
+
+
 	ecs_observer_init (world, &(ecs_observer_desc_t){
 	.filter.terms = {
 	{.id = ecs_id(OpenGL_Shader)},
@@ -222,7 +277,53 @@ void main_ecs_register(ecs_world_t * world)
 	});
 
 
-	ECS_SYSTEM(world, sys_create_program, EcsOnSet, OpenGL_Program, (*, OpenGL_Shader));
+
+
+
+#if 1
+	ecs_observer_init (world, &(ecs_observer_desc_t){
+	.filter.terms = {
+	{.id = ecs_id(OpenGL_Shader)},
+	{.id = ecs_pair(EcsIsA, EcsWildcard)}
+	},
+	.events = {EcsOnAdd},
+	.callback = sys_attach_shader
+	});
+#endif
+
+
+#if 0
+	ecs_observer_init (world, &(ecs_observer_desc_t){
+	.filter.terms = {
+	{.id = ecs_pair(EcsIsA, EcsWildcard)}
+	},
+	.events = {EcsOnAdd},
+	.callback = sys_attach_shader1
+	});
+#endif
+
+#if 0
+	ecs_system_init(world, &(ecs_system_desc_t){
+	.entity = {.name = "Move", .add = {EcsOnUpdate} },
+	.query.filter.terms = {
+	{.id = ecs_id(OpenGL_Shader)},
+	{.id = ecs_pair(EcsIsA, EcsWildcard)}
+	},
+	.callback = sys_attach_shader
+	});
+#endif
+
+#if 0
+	ecs_system_init(world, &(ecs_system_desc_t){
+	.entity = {.name = "Move", .add = {EcsOnUpdate} },
+	.query.filter.terms = {
+	{.id = ecs_pair(EcsIsA, EcsWildcard)}
+	},
+	.callback = sys_attach_shader1
+	});
+#endif
+
+	//ECS_SYSTEM(world, sys_attach_shader, EcsOnSet, OpenGL_Shader, (IsA, *));
 	//ecs_enable (world, sys_create_program, false);
 
 
@@ -247,80 +348,28 @@ void main_ecs_register(ecs_world_t * world)
 		ASSERT_NOTNULL (ecs_singleton_get (world, Freetype_Library)->library);
 	}
 
-	{
-		ecs_entity_t s1 = ecs_new_id (world);
-		ecs_entity_t s2 = ecs_new_id (world);
-		ecs_entity_t p1 = ecs_new_id (world);
-		ecs_entity_t p2 = ecs_new_id (world);
-		ecs_entity_t r = ecs_new_id (world);
-
-		//ecs_entity_t r1 = ecs_new_id (world);
-		//ecs_entity_t r2 = ecs_new_id (world);
-		ECS_TAG(world, r1);
-		ECS_TAG(world, r2);
-
-		/*
-		ecs_set(world, p1, OpenGL_Program, {glCreateProgram()});
-		ecs_set(world, p2, OpenGL_Program, {glCreateProgram()});
-		ecs_set(world, p1, EcsName, {.value = "Program 1"});
-		ecs_set(world, p2, EcsName, {.value = "Program 2"});
-		ecs_set(world, s1, EcsName, {.value = "Shader 1"});
-		ecs_set(world, s2, EcsName, {.value = "Shader 2"});
-		ecs_set (world, s1, Filename, {CSC_SRCDIR"shader_text.glvs"});
-		ecs_set (world, s2, Filename, {CSC_SRCDIR"shader_text.glfs"});
-		//printf ("s1: %i, s2: %i, p1: %i, p2: %i\n", ecs_get(world,s1,OpenGL_Shader)->id, ecs_get(world,s2,OpenGL_Shader)->id, ecs_get(world,p1,OpenGL_Program)->id, ecs_get(world,p2,OpenGL_Program)->id);
-		ecs_add_pair(world, p1, EcsIsA, s1);
-		ecs_add_pair(world, p1, EcsIsA, s2);
-		*/
-		/*
-		ecs_add_pair(world, p2, EcsIsA, s1);
-		ecs_add_pair(world, p2, EcsIsA, s2);
-		*/
-		/*
-		ecs_entity_t e1 = ecs_entity_init(world, &(ecs_entity_desc_t){
-		.add = {ecs_pair(r1, ecs_id(OpenGL_Shader))} });
-		*/
-
-
-		ecs_set(world, p1, OpenGL_Program, {glCreateProgram()});
-		ecs_set(world, p2, OpenGL_Program, {glCreateProgram()});
-		ecs_set(world, s1, OpenGL_Shader, {glCreateShader(GL_VERTEX_SHADER)});
-		ecs_set(world, s2, OpenGL_Shader, {glCreateShader(GL_FRAGMENT_SHADER)});
-		ecs_set(world, p1, EcsName, {.value = "Program 1"});
-		ecs_set(world, p2, EcsName, {.value = "Program 2"});
-		ecs_set(world, s1, EcsName, {.value = "Shader 1"});
-		ecs_set(world, s2, EcsName, {.value = "Shader 2"});
-		ecs_add_pair(world, s1, EcsIsA, p1);
-		ecs_add_pair(world, s2, EcsIsA, p1);
-		ecs_add_pair(world, s1, EcsIsA, p2);
-		ecs_add_pair(world, s2, EcsIsA, p2);
 
 		//ecs_query_t *q = ecs_query_new(world, "OpenGL_Shader, ANY:OpenGL_Program");
-		ecs_query_t *q = ecs_query_init(world, &(ecs_query_desc_t){
-		.filter.terms = {
-		{ecs_id(OpenGL_Shader)},
-		{ecs_pair(EcsIsA, EcsWildcard)}
-		}
-		});
-		ecs_iter_t it = ecs_query_iter(q);
+
+
+
+#if 0
 		while (ecs_query_next (&it))
 		{
 			OpenGL_Shader * s = ecs_term(&it, OpenGL_Shader, 1);
 			ecs_id_t id = ecs_term_id(&it, 2);
 			ecs_entity_t obj = ecs_pair_object(world, id);
-			//OpenGL_Program * p = ecs_term (&it, OpenGL_Program, 2);
-			//OpenGL_Shader * s = ecs_term (&it, OpenGL_Shader, 1);
+			printf ("%i\n", obj);
 			for (int i = 0; i < it.count; i ++)
 			{
-				//printf ("%s\n", ecs_get_name(it.world, it.entities[i]));
-				printf ("%s %s %i\n", ecs_get_name(it.world, it.entities[i]), ecs_get_name(world, obj), ecs_get(world, obj, OpenGL_Program)->id);
-				//printf ("%s %i\n", ecs_get_name(it.world, it.entities[i]), p[0]);
-
-				//printf ("%s: %i, %i\n", ecs_get_name(it.world, it.entities[i]), p[0].id, s[i].id);
+				printf ("%s %s %i %i\n", ecs_get_name(it.world, it.entities[i]), ecs_get_name(world, obj), s[i], ecs_get(world, obj, OpenGL_Program)->id);
 			}
 		}
+#endif
 
-	}
+
+
+
 
 
 
@@ -341,6 +390,59 @@ void main_ecs_register(ecs_world_t * world)
 
 
 
+
+
+	{
+		ecs_entity_t s1 = ecs_new_id (world);
+		ecs_entity_t s2 = ecs_new_id (world);
+		ecs_entity_t p1 = ecs_new_id (world);
+		ecs_entity_t p2 = ecs_new_id (world);
+		ecs_entity_t p3 = ecs_new_id (world);
+		ecs_set (world, p1, OpenGL_Program, {glCreateProgram()});
+		ecs_set (world, p2, OpenGL_Program, {glCreateProgram()});
+		ecs_set (world, p3, OpenGL_Program, {glCreateProgram()});
+		//ecs_set (world, p1, OpenGL_Shader, {1});
+		//ecs_set (world, p2, OpenGL_Shader, {1});
+		ecs_add (world, s1, OpenGL_Shader);
+		ecs_add (world, s2, OpenGL_Shader);
+		ecs_set (world, s1, Filename, {CSC_SRCDIR"shader.glvs"});
+		ecs_set (world, s2, Filename, {CSC_SRCDIR"shader.glfs"});
+		ecs_set (world, p1, EcsName, {.value = "Program 1"});
+		ecs_set (world, p2, EcsName, {.value = "Program 2"});
+		ecs_set (world, p3, EcsName, {.value = "Program 3"});
+		ecs_set (world, s1, EcsName, {.value = "Shader 1"});
+		ecs_set (world, s2, EcsName, {.value = "Shader 2"});
+		ecs_add_pair (world, s1, EcsIsA, p1);
+		ecs_add_pair (world, s2, EcsIsA, p1);
+		ecs_add_pair (world, s1, EcsIsA, p2);
+		ecs_add_pair (world, s2, EcsIsA, p2);
+		//ecs_add_pair (world, s1, EcsIsA, p3);
+		ecs_add_pair (world, s2, EcsIsA, p3);
+	}
+
+
+#if 1
+/*
+id fa00011500000157
+obj 157
+name Program 1
+
+id fa00011500000158
+obj 158
+name Program 2
+*/
+		ecs_query_t *q = ecs_query_init(world, &(ecs_query_desc_t){
+		.filter.terms = {
+		{ecs_id(OpenGL_Shader)},
+		{ecs_pair(EcsIsA, EcsWildcard)}
+		}
+		});
+		ecs_iter_t it = ecs_query_iter (q);
+		while (ecs_query_next (&it))
+		{
+			sys_attach_shader (&it);
+		}
+#endif
 
 }
 
