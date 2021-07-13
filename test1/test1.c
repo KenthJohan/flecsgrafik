@@ -8,7 +8,7 @@ void cb(ecs_iter_t *it)
 	ecs_entity_t r = ecs_pair_relation(it->world, id);
 	for (int i = 0; i < it->count; i ++)
 	{
-		printf ("%s, (%s,%s) [%i]\n", ecs_get_name(it->world, it->entities[i]), ecs_get_name(it->world, r), ecs_get_name(it->world, o), o == EcsWildcard);
+		printf("%s, (%s,%s)\n", ecs_get_name(it->world, it->entities[i]), ecs_get_name(it->world, r), ecs_get_name(it->world, o));
 	}
 }
 
@@ -22,31 +22,33 @@ int main(int argc, char * argv[])
 	ecs_entity_t Apples = ecs_new_id(world);
 	ecs_entity_t Pears = ecs_new_id(world);
 
-	ecs_set (world, Bob, EcsName, {.value = "Bob"});
-	ecs_set (world, Alice, EcsName, {.value = "Alice"});
-	ecs_set (world, Eats, EcsName, {.value = "Eats"});
-	ecs_set (world, Apples, EcsName, {.value = "Apples"});
-	ecs_set (world, Pears, EcsName, {.value = "Pears"});
+	ecs_set(world, Bob, EcsName, {.value = "Bob"});
+	ecs_set(world, Alice, EcsName, {.value = "Alice"});
+	ecs_set(world, Eats, EcsName, {.value = "Eats"});
+	ecs_set(world, Apples, EcsName, {.value = "Apples"});
+	ecs_set(world, Pears, EcsName, {.value = "Pears"});
+
+	ecs_filter_desc_t filter = (ecs_filter_desc_t){.terms = {{.id = ecs_pair(Eats, EcsWildcard)}}};
 
 	ecs_observer_init(world, &(ecs_observer_desc_t){
-	.filter.terms = {{.id = ecs_pair(Eats, EcsWildcard)}},
+	.filter = filter,
 	.events = {EcsOnAdd},
 	.callback = cb
 	});
 
+	printf("ecs_observer_init: \n");
 	ecs_add_pair(world, Bob, Eats, Apples);
 	ecs_add_pair(world, Alice, Eats, Apples);
 	ecs_add_pair(world, Alice, Eats, Pears);
+	ecs_add_pair(world, Alice, Eats, Bob);
 
-	ecs_query_t *q = ecs_query_init(world, &(ecs_query_desc_t){.filter.terms = {{.id = ecs_pair(Eats, EcsWildcard)}}});
+	printf("ecs_query_init: \n");
+	ecs_query_t *q = ecs_query_init(world, &(ecs_query_desc_t){.filter = filter});
 	ecs_iter_t it = ecs_query_iter(q);
 	while (ecs_query_next(&it))
 	{
-		cb (&it);
+		cb(&it);
 	}
-
-	ecs_progress(world, 0);
-	ecs_progress(world, 0);
 
 	return ecs_fini(world);
 }
