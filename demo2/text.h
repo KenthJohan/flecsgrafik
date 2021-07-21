@@ -23,7 +23,7 @@ struct gtext1_context
 
 
 
-static void gtext1_setup (struct gtext1_context * ctx)
+static void gtext1_setup (struct gtext1_context * ctx, FT_UInt pixel_width, FT_UInt pixel_height)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 
@@ -42,9 +42,7 @@ static void gtext1_setup (struct gtext1_context * ctx)
 	glUniform1i (ctx->uniform_tex, unit);
 	*/
 
-
-	FT_Set_Pixel_Sizes (ctx->face, 0, 48);
-	gft_init (ctx->face, ctx->c, &ctx->atlas, 512);
+	gft_init (ctx->face, ctx->c, &ctx->atlas, 512, pixel_width, pixel_height);
 
 }
 

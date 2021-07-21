@@ -108,7 +108,7 @@ int main (int argc, char * argv[])
 	tctx.filename = CSC_SRCDIR"consola.ttf";
 	tctx.ft = ft;
 	glBindTexture (GL_TEXTURE_2D_ARRAY, texlist.tex[0]);
-	gtext1_setup (&tctx);
+	gtext1_setup (&tctx, 48, 48);
 
 
 
@@ -189,7 +189,7 @@ int main (int argc, char * argv[])
 
 
 
-		SDL_Delay (10);
+		//SDL_Delay (10);
 		SDL_GL_SwapWindow (window);
 		gui_profiler_end (&gprofiler);
 	}

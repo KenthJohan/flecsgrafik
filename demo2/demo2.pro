@@ -3,6 +3,7 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
+DEFINES += __USE_MINGW_ANSI_STDIO=1
 DEFINES += CSC_SRCDIR=\\\"../demo2/\\\"
 #DEFINES += DEBUG
 

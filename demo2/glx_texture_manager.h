@@ -5,6 +5,7 @@
 #include "csc/csc_xlog.h"
 #include "csc/csc_math.h"
 #include "csc/csc_gft.h"
+#include "csc/csc_gl.h"
 
 
 
@@ -26,7 +27,8 @@ static void glx_texarray (struct glx_texarray * item)
 {
 	GLsizei mipLevelCount = 1;
 	//glTexImage2D (GL_TEXTURE_2D_ARRAY, 0, GL_ALPHA, item->w, item->h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, 0);
-	glTexStorage3D (GL_TEXTURE_2D_ARRAY, mipLevelCount, GL_R8, item->w, item->h, item->l);
+	//glTexStorage3D (GL_TEXTURE_2D_ARRAY, mipLevelCount, GL_R8, item->w, item->h, item->l);
+	glTexStorage3D (GL_TEXTURE_2D_ARRAY, mipLevelCount, GL_RGBA8, item->w, item->h, item->l);
 	/* We require 1 byte alignment when uploading texture data */
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	/* Clamping to edges is important to prevent artifacts when scaling */
@@ -37,6 +39,7 @@ static void glx_texarray (struct glx_texarray * item)
 	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	ASSERT_GL;
 }
 
 
@@ -45,6 +48,7 @@ static void glx_texarray_gen_gradient (struct glx_texarray * item, float l)
 	uint8_t * a = malloc(item->w * item->h);
 	for (uint32_t i = 0; i < item->w * item->h; ++i) {a[i] = i;}
 	glTexSubImage3D (GL_TEXTURE_2D_ARRAY, 0, 0, 0, l, item->w, item->h, 1, GL_RED, GL_UNSIGNED_BYTE, a);
+	ASSERT_GL;
 	free (a);
 }
 
