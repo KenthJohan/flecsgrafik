@@ -4,7 +4,7 @@
 #include <SDL2/SDL.h>
 
 #include "csc/csc_basic.h"
-#include "csc/csc_debug.h"
+#include "csc/csc_assert.h"
 #include "csc/csc_gl.h"
 #include "csc/csc_xlog.h"
 #include "csc/csc_math.h"

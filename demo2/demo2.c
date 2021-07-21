@@ -1,6 +1,6 @@
 #include "csc/csc_crossos.h"
 #include "csc/csc_basic.h"
-#include "csc/csc_debug.h"
+#include "csc/csc_assert.h"
 #include "csc/csc_malloc_file.h"
 #include "csc/csc_sdl_motion.h"
 #include "csc/csc_gcam.h"
