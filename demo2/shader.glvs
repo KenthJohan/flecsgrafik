@@ -1,13 +1,12 @@
 #version 330 core
-layout (location = 0) in vec2 vpos; // (x,y)
-layout (location = 1) in vec3 vuvl; // (u,v,l) //UV coordinate and texture layer
-//layout (location = 2) in vec3 vl; // (l) //texture layer
+layout (location = 0) in vec4 vpos; // (x,y,z,w)
+layout (location = 1) in vec4 vuvl; // (u,v,l) //UV coordinate and texture layer
 out vec3 uvl;
 uniform mat4 mvp;
 
 void main()
 {
-	gl_Position = mvp * vec4(vpos, 0.0, 1.0);
-	uvl = vuvl;
+	gl_Position = mvp * vec4(vpos.xy, 0.0, 1.0);
+	uvl = vuvl.xyz;
 }
 

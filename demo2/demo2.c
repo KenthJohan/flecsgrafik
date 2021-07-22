@@ -99,8 +99,10 @@ int main (int argc, char * argv[])
 	glx_texlist_setup (&texlist);
 	glx_texlist_gen_gradient (&texlist, 0, 2);
 
-	struct glx_vertex_manager vm = {.capacity = 1000};
+	struct glx_vertex_manager vm = {.capacity = 100000};
+	struct vcontainer vcon = {.capacity = 100000};
 	glx_vertex_manager_setup (&vm);
+	vcontainer_init (&vcon);
 
 
 
@@ -160,16 +162,19 @@ int main (int argc, char * argv[])
 		}
 
 		{
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "123456");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%BCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			glx_vertex_manager_drawtext (&vm, tctx.c, &tctx.atlas, -1.0f, 1.6f, 0.5f/48.0f, 0.5f/48.0f, 0.0f, "ABCDEF");
-			glx_vertex_manager_drawrect (&vm, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
-			glx_vertex_manager_drawrect_border (&vm, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
-			gui_profiler_draw (&gprofiler, &vm, &tctx);
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "123456");
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.1f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%BCDEF");
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.2f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.3f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.4f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.5f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 1.6f, 0.5f/48.0f, 0.5f/48.0f, 0.0f, "ABCDEF");
+			vcontainer_drawrect (&vcon, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+			vcontainer_drawrect_border (&vcon, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
+
+			vcontainer_drawtextf (&vcon, tctx.c, &tctx.atlas, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, 0, "FPS: %3.5f", SDL_GetPerformanceFrequency() / gprofiler.a[0]);
+			vcontainer_drawtextf (&vcon, tctx.c, &tctx.atlas, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, 0, " ms: %3.5f", (gprofiler.a[0] * 1000.0) / SDL_GetPerformanceFrequency());
+			gui_profiler_draw (&gprofiler, &tctx);
 		}
 
 
@@ -182,7 +187,7 @@ int main (int argc, char * argv[])
 			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
 			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
 			glBindTexture (GL_TEXTURE_2D_ARRAY, texlist.tex[0]);
-			glx_vertex_manager_flush (&vm);
+			glx_vertex_manager_flush (&vm, &vcon);
 		}
 
 

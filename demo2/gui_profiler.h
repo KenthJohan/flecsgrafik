@@ -44,7 +44,7 @@ static void gui_profiler_end (struct gui_profiler * item)
 	//return  main_profile1[i] / (double)SDL_GetPerformanceFrequency();
 }
 
-static void gui_profiler_draw (struct gui_profiler * item, struct glx_vertex_manager * vm, struct gtext1_context * tctx)
+static void gui_profiler_draw (struct gui_profiler * item, struct gtext1_context * tctx)
 {
 	item->i &= (GUI_PROFILER_HCOUNT-1);
 	double f = (double)SDL_GetPerformanceFrequency();
@@ -62,6 +62,4 @@ static void gui_profiler_draw (struct gui_profiler * item, struct glx_vertex_man
 	ASSERT_GL;
 	item->h[item->i] = (item->a[0] * 1000) / f;
 	item->i++;
-	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -1.0f, 0.1f/48.0f, 0.1f/48.0f, 0, "FPS: %3.5f", f / item->a[0]);
-	glx_vertex_manager_drawtextf (vm, tctx->c, &tctx->atlas, -1.0f, -0.9f, 0.1f/48.0f, 0.1f/48.0f, 0, " ms: %3.5f", (item->a[0] * 1000.0) / f);
 }
