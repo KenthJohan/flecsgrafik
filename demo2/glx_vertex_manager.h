@@ -12,11 +12,6 @@
 #include "csc/csc_vu32.h"
 #include "csc/csc_primf32.h"
 
-enum glx_vattr
-{
-	GLX_VATTR0_POS_XY = 0,
-	GLX_VATTR1_TEX_UVL = 1
-};
 
 
 struct glx_vertex
@@ -26,13 +21,7 @@ struct glx_vertex
 };
 
 
-struct glx_vertex_manager
-{
-	GLuint vao;
-	GLuint vbo[1];
-	uint32_t capacity; //Number of vertices
-	uint32_t last; //Number of vertices
-};
+
 
 
 struct vcontainer
@@ -54,32 +43,37 @@ static void vcontainer_init (struct vcontainer * ctx)
 
 
 static void vcontainer_drawtext
-(struct vcontainer * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float sx, float sy, float l, char const * text)
+(struct vcontainer * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float z, float sx, float sy, float l, char const * text)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
+	ASSERT_PARAM_NOTNULL (c);
+	ASSERT_PARAM_NOTNULL (atlas);
+	ASSERT_PARAM_NOTNULL (text);
 	ASSERT_NOTNULL (ctx->v);
 	struct glx_vertex * v = ctx->v + ctx->last;
 	uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
 	uint32_t n;
 	n = gft_gen_pos (v->xyzw.e, ctx->capacity, stride, text, c, x, y, sx, sy);
 	n = gft_gen_uv  (v->uvl.e, ctx->capacity, stride, text, c, atlas->w, atlas->h);
-	vf32_set1_strided (v->uvl.e + 2, l, 6, stride); //Set vertex texture layer
+	vf32_set1_strided (v->xyzw.e + 2, z, n, stride); //Set z
+	vf32_set1_strided (v->uvl.e + 2, l, n, stride); //Set vertex texture layer
 	ctx->last += n;
 }
 
 
 static void vcontainer_drawtextf
-(struct vcontainer * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float sx, float sy, float l, const char* format, ...)
+(struct vcontainer * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float z, float sx, float sy, float l, const char* format, ...)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ASSERT_PARAM_NOTNULL (format);
+	ASSERT_PARAM_NOTNULL (atlas);
 	char buf[1024];
 	memset (buf, 0, 1024);
 	va_list va;
 	va_start (va, format);
 	vsnprintf (buf, 1024, format, va);
 	//printf ("%s", buf);
-	vcontainer_drawtext (ctx, c, atlas, x, y, sx, sy, l, buf);
+	vcontainer_drawtext (ctx, c, atlas, x, y, z, sx, sy, l, buf);
 	va_end (va);
 }
 
@@ -102,6 +96,7 @@ static void vcontainer_drawrect (struct vcontainer * ctx, float x, float y, floa
 
 static void vcontainer_drawrect_border (struct vcontainer * ctx, float x, float y, float w, float h, float l)
 {
+	ASSERT_PARAM_NOTNULL (ctx);
 	float t = 0.1f;
 	vcontainer_drawrect (ctx, x, y, w, h, l);//Draw rectangle
 	vcontainer_drawrect (ctx,   x, y-t, w, t, l);//Draw bottom border
@@ -113,6 +108,27 @@ static void vcontainer_drawrect_border (struct vcontainer * ctx, float x, float 
 
 
 
+
+
+
+
+
+
+enum glx_vattr
+{
+	GLX_VATTR0_POS_XY = 0,
+	GLX_VATTR1_TEX_UVL = 1
+};
+
+
+
+struct glx_vertex_manager
+{
+	GLuint vao;
+	GLuint vbo[1];
+	uint32_t capacity; //Number of vertices
+	uint32_t last; //Number of vertices
+};
 
 
 static void glx_vertex_manager_setup (struct glx_vertex_manager * ctx)
@@ -151,7 +167,7 @@ static void glx_vertex_manager_flush (struct glx_vertex_manager * ctx, struct vc
 
 
 	//Number of triangles:
-	GLsizei count = container->last;
+	GLsizei const count = container->last;
 	for (int i = 0; i < count; ++i)
 	{
 		//printf ("Vertex%i: %2.5f %2.5f %2.5f %2.5f L%.1f\n", i, container->v[i].xyzw.x, container->v[i].xyzw.y, container->v[i].uvl.x, container->v[i].uvl.y, container->v[i].uvl.z);
@@ -160,7 +176,7 @@ static void glx_vertex_manager_flush (struct glx_vertex_manager * ctx, struct vc
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo[0]);
 		// Triangles vertices size in bytes:
-		GLsizeiptr size = sizeof(struct glx_vertex)*count;
+		GLsizeiptr const size = sizeof(struct glx_vertex)*count;
 		glBufferSubData (GL_ARRAY_BUFFER, 0, size, container->v);
 		ASSERT_GL;
 		//TODO: Why do we need this?:
