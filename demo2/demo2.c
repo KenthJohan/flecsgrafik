@@ -99,10 +99,10 @@ int main (int argc, char * argv[])
 	glx_texlist_setup (&texlist);
 	glx_texlist_gen_gradient (&texlist, 0, 2);
 
-	struct glx_vertex_manager vm = {.capacity = 1000000};
-	struct vcontainer vcon = {.capacity = 1000000};
-	glx_vertex_manager_setup (&vm);
-	vcontainer_init (&vcon);
+	struct glx_vao vm = {.capacity = 1000000};
+	struct vgraphics vcon = {.capacity = 1000000};
+	glx_vao_init (&vm);
+	vgraphics_init (&vcon);
 
 
 
@@ -169,38 +169,38 @@ int main (int argc, char * argv[])
 			{
 				for (uint64_t i = 0; i < 100; ++i)
 				{
-					vcontainer_drawtextf (&vcon, tctx.c, &tctx.atlas, sin(i*0.1f + counter*0.01f) - j, cos(i*0.1f + counter*0.01f), i * -0.1f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%jx", i*j*counter);
+					vgraphics_drawtextf (&vcon, tctx.c, &tctx.atlas, sin(i*0.1f + counter*0.01f) - j, cos(i*0.1f + counter*0.01f), i * -0.1f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%jx", i*j*counter);
 				}
 			}
 
 
-			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.1f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%BCDEF");
-			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.2f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.3f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.4f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.5f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
-			vcontainer_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 1.6f, 0.0f, 0.5f/48.0f, 0.5f/48.0f, 0.0f, "ABCDEF");
-			vcontainer_drawrect (&vcon, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
-			vcontainer_drawrect_border (&vcon, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
-			vcontainer_drawtextf (&vcon, tctx.c, &tctx.atlas, -1.0f, -1.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0, "FPS: %3.5f", (float)SDL_GetPerformanceFrequency() / gprofiler.a[0]);
-			vcontainer_drawtextf (&vcon, tctx.c, &tctx.atlas, -1.0f, -0.9f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0, " ms: %3.5f", (gprofiler.a[0] * 1000.0) / SDL_GetPerformanceFrequency());
-			gui_profiler_draw (&gprofiler, &tctx);
+			vgraphics_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.1f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%BCDEF");
+			vgraphics_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.2f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vgraphics_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.3f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vgraphics_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.4f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vgraphics_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 0.5f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "ABCDEF");
+			vgraphics_drawtext (&vcon, tctx.c, &tctx.atlas, -1.0f, 1.6f, 0.0f, 0.5f/48.0f, 0.5f/48.0f, 0.0f, "ABCDEF");
+
 		}
 
 
 
 		{
-			m4f32 m;
-
-			glUseProgram (program);
-			m = (m4f32)M4F32_IDENTITY;
-			//glUniformMatrix4fv (mvp, 1, GL_FALSE, m.m);
 			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
 			glBindTexture (GL_TEXTURE_2D_ARRAY, texlist.tex[0]);
-			glx_vertex_manager_flush (&vm, &vcon);
+			glx_vao_flush (&vm, &vcon);
 		}
 
-
+		{
+			gui_profiler_draw (&gprofiler, &tctx);
+			vgraphics_drawtextf (&vcon, tctx.c, &tctx.atlas, -1.0f, -0.9f, 0.0f, 0.05f/48.0f, 0.05f/48.0f, 0, "FPS: %3.3f, %3.3f", (float)SDL_GetPerformanceFrequency() / gprofiler.a[0], (gprofiler.a[0] * 1000.0) / SDL_GetPerformanceFrequency());
+			vgraphics_drawrect_border (&vcon, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
+			vgraphics_drawrect (&vcon, -1.0f, -1.0f, 1.0f, 0.2f, 1.0f);
+			m4f32 m;
+			m = (m4f32)M4F32_IDENTITY;
+			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, m.m);
+			glx_vao_flush (&vm, &vcon);
+		}
 
 
 

@@ -24,7 +24,7 @@ struct glx_vertex
 
 
 
-struct vcontainer
+struct vgraphics
 {
 	uint32_t capacity; //Number of vertices
 	uint32_t last; //Number of vertices
@@ -32,7 +32,7 @@ struct vcontainer
 };
 
 
-static void vcontainer_init (struct vcontainer * ctx)
+static void vgraphics_init (struct vgraphics * ctx)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ctx->last = 0;
@@ -42,8 +42,8 @@ static void vcontainer_init (struct vcontainer * ctx)
 }
 
 
-static void vcontainer_drawtext
-(struct vcontainer * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float z, float sx, float sy, float l, char const * text)
+static void vgraphics_drawtext
+(struct vgraphics * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float z, float sx, float sy, float l, char const * text)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ASSERT_PARAM_NOTNULL (c);
@@ -61,8 +61,8 @@ static void vcontainer_drawtext
 }
 
 
-static void vcontainer_drawtextf
-(struct vcontainer * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float z, float sx, float sy, float l, const char* format, ...)
+static void vgraphics_drawtextf
+(struct vgraphics * ctx, struct gft_char c[128], struct gft_atlas * atlas, float x, float y, float z, float sx, float sy, float l, const char* format, ...)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ASSERT_PARAM_NOTNULL (format);
@@ -73,12 +73,12 @@ static void vcontainer_drawtextf
 	va_start (va, format);
 	vsnprintf (buf, 1024, format, va);
 	//printf ("%s", buf);
-	vcontainer_drawtext (ctx, c, atlas, x, y, z, sx, sy, l, buf);
+	vgraphics_drawtext (ctx, c, atlas, x, y, z, sx, sy, l, buf);
 	va_end (va);
 }
 
 
-static void vcontainer_drawrect (struct vcontainer * ctx, float x, float y, float w, float h, float l)
+static void vgraphics_drawrect (struct vgraphics * ctx, float x, float y, float w, float h, float l)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ASSERT_NOTNULL (ctx->v);
@@ -94,15 +94,15 @@ static void vcontainer_drawrect (struct vcontainer * ctx, float x, float y, floa
 }
 
 
-static void vcontainer_drawrect_border (struct vcontainer * ctx, float x, float y, float w, float h, float l)
+static void vgraphics_drawrect_border (struct vgraphics * ctx, float x, float y, float w, float h, float l)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	float t = 0.1f;
-	vcontainer_drawrect (ctx, x, y, w, h, l);//Draw rectangle
-	vcontainer_drawrect (ctx,   x, y-t, w, t, l);//Draw bottom border
-	vcontainer_drawrect (ctx, x-t,   y, t, h, l);//Draw left border
-	vcontainer_drawrect (ctx, w+x,   y, t, h, l);//Draw right border
-	vcontainer_drawrect (ctx,   x, y+h, w, t, l);//Draw top border
+	vgraphics_drawrect (ctx, x, y, w, h, l);//Draw rectangle
+	vgraphics_drawrect (ctx,   x, y-t, w, t, l);//Draw bottom border
+	vgraphics_drawrect (ctx, x-t,   y, t, h, l);//Draw left border
+	vgraphics_drawrect (ctx, w+x,   y, t, h, l);//Draw right border
+	vgraphics_drawrect (ctx,   x, y+h, w, t, l);//Draw top border
 }
 
 
@@ -122,7 +122,7 @@ enum glx_vattr
 
 
 
-struct glx_vertex_manager
+struct glx_vao
 {
 	GLuint vao;
 	GLuint vbo[1];
@@ -131,7 +131,7 @@ struct glx_vertex_manager
 };
 
 
-static void glx_vertex_manager_setup (struct glx_vertex_manager * ctx)
+static void glx_vao_init (struct glx_vao * ctx)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	glGenBuffers (1, ctx->vbo);
@@ -154,7 +154,7 @@ static void glx_vertex_manager_setup (struct glx_vertex_manager * ctx)
 
 
 
-static void glx_vertex_manager_flush (struct glx_vertex_manager * ctx, struct vcontainer * container)
+static void glx_vao_flush (struct glx_vao * ctx, struct vgraphics * container)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ASSERT_NOTNULL (container->v);

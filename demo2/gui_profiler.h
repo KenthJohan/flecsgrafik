@@ -51,8 +51,8 @@ static void gui_profiler_draw (struct gui_profiler * item, struct gtext1_context
 	int w = 512;
 	int h = 512;
 	uint32_t image[512*512] = {};
-	csc_pixmap_plot_u8 (image, w, h, item->h, GUI_PROFILER_HCOUNT, 0xFFFFFFFF);
-	csc_pixmap_drawrect (image, w, h, item->i, 0, 10, h, 0xFF0000FF);
+	csc_pixmap_plot_u8 (image, w, h, item->h, GUI_PROFILER_HCOUNT, 0xFF00FFFF);
+	csc_pixmap_drawrect (image, w, h, item->i, 0, 1, h, 0xFF0000FF);
 	GLint xoffset = 0;
 	GLint yoffset = 0;
 	GLint zoffset = 1;
