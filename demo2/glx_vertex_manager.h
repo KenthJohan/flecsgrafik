@@ -94,6 +94,42 @@ static void vgraphics_drawrect (struct vgraphics * ctx, float x, float y, float 
 }
 
 
+static void vgraphics_drawrect1 (struct vgraphics * ctx, float x, float y, float w, float h, float l, float tu, float tv)
+{
+	ASSERT_PARAM_NOTNULL (ctx);
+	ASSERT_NOTNULL (ctx->v);
+	struct glx_vertex * v = ctx->v + ctx->last;
+	uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
+	primf32_make_rectangle4 (v->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
+	v[0].uvl.x = tu;
+	v[1].uvl.x = tu;
+	v[2].uvl.x = tu;
+	v[3].uvl.x = tu;
+	v[4].uvl.x = tu;
+	v[5].uvl.x = tu;
+
+	v[0].uvl.y = tv;
+	v[1].uvl.y = tv;
+	v[2].uvl.y = tv;
+	v[3].uvl.y = tv;
+	v[4].uvl.y = tv;
+	v[5].uvl.y = tv;
+
+	v[0].uvl.z = l;
+	v[1].uvl.z = l;
+	v[2].uvl.z = l;
+	v[3].uvl.z = l;
+	v[4].uvl.z = l;
+	v[5].uvl.z = l;
+
+	//v2f32_vertices6_set_rectangle (v->xyzw.e, stride, x, y, w, h); // Set vertex position
+	//v2f32_vertices6_set_rectangle (v->uvl.e, stride, 0, 0, 1, 1); // Set vertex texture uv coordinate
+	//vf32_set1_strided (v->uvl.e + 2, l, 6, stride); //Set vertex texture layer
+	ctx->last += 6;
+}
+
+
+
 static void vgraphics_drawrect_border (struct vgraphics * ctx, float x, float y, float w, float h, float l)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
@@ -187,6 +223,124 @@ static void glx_vao_flush (struct glx_vao * ctx, struct vgraphics * container)
 	ASSERT_GL;
 	container->last = 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+window (x1,y1,w1,h1)
+-window (x2,y2,w2,h2)
+--window (x3,y3,w3,h3)
+window (x4,y4,w4,h4)
+-window (x5,y5,w5,h5)
+
+//Relative position in % and px
+//Three rectangles:
+*-----------------*
+|		1		  |
+*-----------------*
+|		4		  |
+|				  |
+*-----------------*
+
+Pair:
+(0,1)
+(0,4)
+(1,2)
+(1,3)
+(1,5)
+(0,7)
+
+Adjacency matrix:
+
+*/
+
+
+
+#define GUI_LEFT     UINT32_C(0x00000001)
+#define GUI_RIGHT    UINT32_C(0x00000002)
+#define GUI_UP       UINT32_C(0x00000004)
+#define GUI_DOWN     UINT32_C(0x00000008)
+
+#define GUI_MAX_RECTS 100
+struct gui_context
+{
+	v2u32 pos[GUI_MAX_RECTS];
+	v2u32 dim[GUI_MAX_RECTS];
+	v2u32 padding[GUI_MAX_RECTS];
+
+	v2u32 fpos[GUI_MAX_RECTS];
+	v2u32 fdim[GUI_MAX_RECTS];
+
+	uint32_t flags[GUI_MAX_RECTS];
+	uint32_t parent[GUI_MAX_RECTS];
+	uint32_t rect_last;
+};
+
+
+static void gui_request_dim(struct gui_context * ctx, uint32_t start, float * w, float * h)
+{
+	do
+	{
+		//*w = MIN(*w, ctx->);
+		start = ctx->parent[start];
+	}
+	while (start);
+}
+
+
+static void gui_push (struct gui_context * ctx, uint32_t parent, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t flags)
+{
+	//TODO: Find a free index
+	uint32_t index = ctx->rect_last;
+	uint32_t ox = ctx->fpos[parent].x + ctx->padding[parent].x;
+	uint32_t oy = ctx->fpos[parent].y + ctx->padding[parent].x;
+	ctx->fpos[parent].x += (ctx->flags[parent] & GUI_RIGHT) ? w : 0;
+	ctx->fpos[parent].y += (ctx->flags[parent] & GUI_UP) ? h : 0;
+	ctx->pos[index] = (v2u32){ox + x, oy + y};
+	ctx->dim[index] = (v2u32){w, h};
+	ctx->fpos[index].x = ctx->pos[index].x + (flags & GUI_RIGHT) ? w : 0;
+	ctx->fpos[index].y = ctx->pos[index].y + (flags & GUI_RIGHT) ? w : 0;
+	ctx->flags[index] = flags;
+	ctx->rect_last++;
+}
+
+
+
+static void gui_flush (struct gui_context * ctx, struct vgraphics * graphics, int sw, int sh)
+{
+	srand (1);
+	for (uint32_t i = 0; i < ctx->rect_last; ++i)
+	{
+		float x = ctx->pos[i].x / (float)sw;
+		float y = ctx->pos[i].y / (float)sh;
+		float w = ctx->dim[i].x / (float)sw;
+		float h = ctx->dim[i].y / (float)sh;
+		vgraphics_drawrect1 (graphics, x, y, w, h, 2, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX);
+	}
+	ctx->rect_last = 0;
+}
+
 
 
 

@@ -43,11 +43,49 @@ static void glx_texarray (struct glx_texarray * item)
 }
 
 
+static void pixmap_draw_rectangle (uint8_t * pixmap, uint32_t ox, uint32_t oy, uint32_t w, uint32_t h, uint32_t t)
+{
+	for (uint32_t y = 0; y < t; ++y)
+	{
+		for (uint32_t x = 0; x < w; ++x)
+		{
+			pixmap[w*y + x] = 0xFF;
+		}
+	}
+	for (uint32_t y = h-t; y < h; ++y)
+	{
+		for (uint32_t x = 0; x < w; ++x)
+		{
+			pixmap[w*y + x] = 0xFF;
+		}
+	}
+	for (uint32_t y = 0; y < h; ++y)
+	{
+		for (uint32_t x = 0; x < t; ++x)
+		{
+			pixmap[w*y + x] = 0xFF;
+		}
+	}
+	for (uint32_t y = 0; y < h; ++y)
+	{
+		for (uint32_t x = w-t; x < w; ++x)
+		{
+			pixmap[w*y + x] = 0xFF;
+		}
+	}
+}
+
+
+
 static void glx_texarray_gen_gradient (struct glx_texarray * item, float l)
 {
-	uint8_t * a = malloc(item->w * item->h);
-	for (uint32_t i = 0; i < item->w * item->h; ++i) {a[i] = i;}
-	glTexSubImage3D (GL_TEXTURE_2D_ARRAY, 0, 0, 0, l, item->w, item->h, 1, GL_RED, GL_UNSIGNED_BYTE, a);
+	uint32_t * a = calloc (1, item->w * item->h * sizeof (uint32_t));
+	//pixmap_draw_rectangle(a, 0, 0, item->w, item->h, 10.0f);
+	for (uint32_t i = 0; i < item->w * item->h; ++i)
+	{
+		a[i] = ((uint8_t)rand() << 0) | ((uint8_t)rand() << 8) | ((uint8_t)rand() << 16) | (0xFF << 24);
+	}
+	glTexSubImage3D (GL_TEXTURE_2D_ARRAY, 0, 0, 0, l, item->w, item->h, 1, GL_RGBA, GL_UNSIGNED_BYTE, a);
 	ASSERT_GL;
 	free (a);
 }
