@@ -113,9 +113,47 @@ int main (int argc, char * argv[])
 	gtext1_setup (&tctx, 48, 48);
 
 
-
-
 	struct gui_profiler gprofiler;
+
+
+	struct gui_context mygui = {0};
+	mygui.rectangle[0] = (struct gui_rectangle){.x = 0, .y = 0, .w = 400, .h = 400};
+	mygui.drawarea[0] = (struct gui_rectangle){.x = 10, .y = 10, .w = 380, .h = 380};
+	mygui.flags[0] = GUI_DOWN;
+	mygui.last = 1;
+
+	gui_push (&mygui, 0, 100, &GUI_PAD(5), GUI_RIGHT);
+	gui_push (&mygui, 0, 100, &GUI_PAD(5), GUI_LEFT);
+	gui_push (&mygui, 0, 100, &GUI_PAD(5), GUI_UP);
+	gui_push (&mygui, 0, 100, &GUI_PAD(5), GUI_UP);
+
+	gui_push (&mygui, 1, 10, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 1, 20, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 1, 40, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 1, 80, &GUI_PAD(5), GUI_DEFAULT);
+
+	gui_push (&mygui, 2, 10, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 2, 20, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 2, 40, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 2, 80, &GUI_PAD(5), GUI_DEFAULT);
+
+	gui_push (&mygui, 3, 10, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 3, 20, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 3, 40, &GUI_PAD(5), GUI_DEFAULT);
+	gui_push (&mygui, 3, 80, &GUI_PAD(5), GUI_DEFAULT);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	while (main_flags & CSC_SDLGLEW_RUNNING)
@@ -199,26 +237,10 @@ int main (int argc, char * argv[])
 			vgraphics_drawtextf (&vg, tctx.c, &tctx.atlas, -1.0f, -0.9f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0, "FPS: %3.3f, %3.3f", (float)SDL_GetPerformanceFrequency() / gprofiler.a[0], (gprofiler.a[0] * 1000.0) / SDL_GetPerformanceFrequency());
 			vgraphics_drawrect_border (&vg, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
 			vgraphics_drawrect (&vg, -1.0f, -1.0f, 1.0f, 0.2f, 1.0f);
-
-
-			struct gui_context gctx = {0};
-			gctx.dim[0] = (v2u32){{400, 400}};
-			gctx.padding[0] = (v2u32){{10, 10}};
-			gctx.flags[0] = GUI_UP;
-			gctx.rect_last = 1;
-			gui_push (&gctx, 0, 0, 0, 100, 100, GUI_RIGHT);
-			gui_push (&gctx, 0, 0, 0, 100, 100, GUI_RIGHT);
-			gui_push (&gctx, 0, 0, 0, 100, 100, GUI_RIGHT);
-			gui_push (&gctx, 0, 0, 0, 100, 100, GUI_RIGHT);
-
-			gui_push (&gctx, 3, 0, 0, 100, 100, GUI_RIGHT);
-			gui_push (&gctx, 3, 0, 0, 100, 100, GUI_RIGHT);
 			int w;
 			int h;
 			SDL_GetWindowSize (window, &w, &h);
-			gui_flush (&gctx, &vg, w, h);
-
-
+			gui_flush (&mygui, &vg, w, h);
 			m4f32 m;
 			m = (m4f32)M4F32_IDENTITY;
 			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, m.m);

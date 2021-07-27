@@ -275,54 +275,108 @@ Adjacency matrix:
 
 */
 
+struct gui_rectangle
+{
+	uint16_t x;
+	uint16_t y;
+	uint16_t w;
+	uint16_t h;
+};
 
+struct gui_padding
+{
+	uint16_t l;
+	uint16_t r;
+	uint16_t t;
+	uint16_t b;
+};
 
-#define GUI_LEFT     UINT32_C(0x00000001)
-#define GUI_RIGHT    UINT32_C(0x00000002)
-#define GUI_UP       UINT32_C(0x00000004)
-#define GUI_DOWN     UINT32_C(0x00000008)
+#define GUI_PAD(x) (struct gui_padding){(x),(x),(x),(x)}
+#define GUI_DEFAULT  UINT32_C(0x00000001)
+#define GUI_LEFT     UINT32_C(0x00000010)
+#define GUI_RIGHT    UINT32_C(0x00000020)
+#define GUI_UP       UINT32_C(0x00000040)
+#define GUI_DOWN     UINT32_C(0x00000080)
+#define GUI_LAST     UINT32_C(0x00000100)
+#define GUI_FIRST    UINT32_C(0x00000200)
 
 #define GUI_MAX_RECTS 100
 struct gui_context
 {
-	v2u32 pos[GUI_MAX_RECTS];
-	v2u32 dim[GUI_MAX_RECTS];
-	v2u32 padding[GUI_MAX_RECTS];
+	//Generated:
+	struct gui_rectangle rectangle[GUI_MAX_RECTS];
+	struct gui_rectangle drawarea[GUI_MAX_RECTS];
+	uint16_t last;
 
-	v2u32 fpos[GUI_MAX_RECTS];
-	v2u32 fdim[GUI_MAX_RECTS];
-
+	//Source:
+	struct gui_padding padding[GUI_MAX_RECTS];
+	uint16_t size[GUI_MAX_RECTS];
 	uint32_t flags[GUI_MAX_RECTS];
-	uint32_t parent[GUI_MAX_RECTS];
-	uint32_t rect_last;
+	uint16_t parent[GUI_MAX_RECTS];
 };
 
 
-static void gui_request_dim(struct gui_context * ctx, uint32_t start, float * w, float * h)
-{
-	do
-	{
-		//*w = MIN(*w, ctx->);
-		start = ctx->parent[start];
-	}
-	while (start);
-}
 
-
-static void gui_push (struct gui_context * ctx, uint32_t parent, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t flags)
+static void gui_push (struct gui_context * ctx, uint16_t parent, uint16_t size, struct gui_padding * padding, uint32_t flags)
 {
 	//TODO: Find a free index
-	uint32_t index = ctx->rect_last;
-	uint32_t ox = ctx->fpos[parent].x + ctx->padding[parent].x;
-	uint32_t oy = ctx->fpos[parent].y + ctx->padding[parent].x;
-	ctx->fpos[parent].x += (ctx->flags[parent] & GUI_RIGHT) ? w : 0;
-	ctx->fpos[parent].y += (ctx->flags[parent] & GUI_UP) ? h : 0;
-	ctx->pos[index] = (v2u32){ox + x, oy + y};
-	ctx->dim[index] = (v2u32){w, h};
-	ctx->fpos[index].x = ctx->pos[index].x + (flags & GUI_RIGHT) ? w : 0;
-	ctx->fpos[index].y = ctx->pos[index].y + (flags & GUI_RIGHT) ? w : 0;
+	uint32_t index = ctx->last;
+	XLOG (XLOG_INF, XLOG_GENERAL, "Adding rectangle %i to %i with size: %i\n", index, parent, size);
+	ctx->size[index] = size;
 	ctx->flags[index] = flags;
-	ctx->rect_last++;
+	ctx->padding[index] = padding ? *padding : (struct gui_padding){0};
+	ctx->last++;
+
+	if (ctx->flags[parent] & GUI_UP)
+	{
+		size = MIN(size, ctx->drawarea[parent].h);
+		ctx->rectangle[index].x = ctx->drawarea[parent].x;
+		ctx->rectangle[index].y = ctx->drawarea[parent].y;
+		ctx->rectangle[index].w = ctx->drawarea[parent].w;
+		ctx->rectangle[index].h = size;
+		ctx->drawarea[parent].y += size;
+		ctx->drawarea[parent].h -= size;
+	}
+	else if (ctx->flags[parent] & GUI_DOWN)
+	{
+		size = MIN(size, ctx->drawarea[parent].h);
+		ctx->rectangle[index].x = ctx->drawarea[parent].x;
+		ctx->rectangle[index].y = ctx->drawarea[parent].y + ctx->drawarea[parent].h - size;
+		ctx->rectangle[index].w = ctx->drawarea[parent].w;
+		ctx->rectangle[index].h = size;
+		ctx->drawarea[parent].h -= size;
+	}
+	else if (ctx->flags[parent] & GUI_RIGHT)
+	{
+		size = MIN(size, ctx->drawarea[parent].h);
+		ctx->rectangle[index].x = ctx->drawarea[parent].x;
+		ctx->rectangle[index].y = ctx->drawarea[parent].y;
+		ctx->rectangle[index].w = size;
+		ctx->rectangle[index].h = ctx->drawarea[parent].h;
+		ctx->drawarea[parent].x += size;
+		ctx->drawarea[parent].w -= size;
+	}
+	else if (ctx->flags[parent] & GUI_LEFT)
+	{
+		size = MIN(size, ctx->drawarea[parent].h);
+		ctx->rectangle[index].x = ctx->drawarea[parent].x + ctx->drawarea[parent].w - size;
+		ctx->rectangle[index].y = ctx->drawarea[parent].y;
+		ctx->rectangle[index].w = size;
+		ctx->rectangle[index].h = ctx->drawarea[parent].h;
+		ctx->drawarea[parent].w -= size;
+	}
+
+
+	{
+		uint16_t x = ctx->rectangle[index].x + ctx->padding[index].b;
+		uint16_t y = ctx->rectangle[index].y + ctx->padding[index].l;
+		uint16_t w = ctx->rectangle[index].w - (ctx->padding[index].l + ctx->padding[index].r);
+		uint16_t h = ctx->rectangle[index].h - (ctx->padding[index].b + ctx->padding[index].t);
+		ctx->drawarea[index].x = x;
+		ctx->drawarea[index].y = y;
+		ctx->drawarea[index].w = w;
+		ctx->drawarea[index].h = h;
+	}
 }
 
 
@@ -330,15 +384,15 @@ static void gui_push (struct gui_context * ctx, uint32_t parent, uint32_t x, uin
 static void gui_flush (struct gui_context * ctx, struct vgraphics * graphics, int sw, int sh)
 {
 	srand (1);
-	for (uint32_t i = 0; i < ctx->rect_last; ++i)
+	for (uint32_t i = 0; i < ctx->last; ++i)
 	{
-		float x = ctx->pos[i].x / (float)sw;
-		float y = ctx->pos[i].y / (float)sh;
-		float w = ctx->dim[i].x / (float)sw;
-		float h = ctx->dim[i].y / (float)sh;
+		float x = ctx->rectangle[i].x / (float)sw;
+		float y = ctx->rectangle[i].y / (float)sh;
+		float w = ctx->rectangle[i].w / (float)sw;
+		float h = ctx->rectangle[i].h / (float)sh;
 		vgraphics_drawrect1 (graphics, x, y, w, h, 2, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX);
 	}
-	ctx->rect_last = 0;
+	//ctx->last = 0;
 }
 
 
