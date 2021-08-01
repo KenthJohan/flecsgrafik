@@ -90,7 +90,6 @@ static void vgraphics_drawrect (struct vgraphics * ctx, float x, float y, float 
 	ctx->last += 6;
 }
 
-
 static void vgraphics_drawrect1 (struct vgraphics * ctx, float x, float y, float w, float h, float l, float tu, float tv)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
