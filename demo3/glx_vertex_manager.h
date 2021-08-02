@@ -75,48 +75,14 @@ static void vgraphics_drawtextf
 }
 
 
-static void vgraphics_drawrect (struct vgraphics * ctx, float x, float y, float w, float h, float l)
+static void vgraphics_drawrect_uv (struct vgraphics * ctx, float x, float y, float w, float h, float u, float v, float du, float dv, float l)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
 	ASSERT_NOTNULL (ctx->v);
-	struct glx_vertex * v = ctx->v + ctx->last;
+	struct glx_vertex * vertices = ctx->v + ctx->last;
 	uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
-	primf32_make_rectangle4 (v->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
-	primf32_make_rectangle4 (v->uvl.e, stride, 0.0f, 0.0f, 1.0f, 1.0f, l, 0.0f);
-
-	//v2f32_vertices6_set_rectangle (v->xyzw.e, stride, x, y, w, h); // Set vertex position
-	//v2f32_vertices6_set_rectangle (v->uvl.e, stride, 0, 0, 1, 1); // Set vertex texture uv coordinate
-	//vf32_set1_strided (v->uvl.e + 2, l, 6, stride); //Set vertex texture layer
-	ctx->last += 6;
-}
-
-static void vgraphics_drawrect1 (struct vgraphics * ctx, float x, float y, float w, float h, float l, float tu, float tv)
-{
-	ASSERT_PARAM_NOTNULL (ctx);
-	ASSERT_NOTNULL (ctx->v);
-	struct glx_vertex * v = ctx->v + ctx->last;
-	uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
-	primf32_make_rectangle4 (v->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
-	v[0].uvl.x = tu;
-	v[1].uvl.x = tu;
-	v[2].uvl.x = tu;
-	v[3].uvl.x = tu;
-	v[4].uvl.x = tu;
-	v[5].uvl.x = tu;
-
-	v[0].uvl.y = tv;
-	v[1].uvl.y = tv;
-	v[2].uvl.y = tv;
-	v[3].uvl.y = tv;
-	v[4].uvl.y = tv;
-	v[5].uvl.y = tv;
-
-	v[0].uvl.z = l;
-	v[1].uvl.z = l;
-	v[2].uvl.z = l;
-	v[3].uvl.z = l;
-	v[4].uvl.z = l;
-	v[5].uvl.z = l;
+	primf32_make_rectangle4 (vertices->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
+	primf32_make_rectangle4 (vertices->uvl.e, stride, u, v, du, dv, l, 0.0f);
 
 	//v2f32_vertices6_set_rectangle (v->xyzw.e, stride, x, y, w, h); // Set vertex position
 	//v2f32_vertices6_set_rectangle (v->uvl.e, stride, 0, 0, 1, 1); // Set vertex texture uv coordinate
@@ -125,7 +91,7 @@ static void vgraphics_drawrect1 (struct vgraphics * ctx, float x, float y, float
 }
 
 
-
+/*
 static void vgraphics_drawrect_border (struct vgraphics * ctx, float x, float y, float w, float h, float l)
 {
 	ASSERT_PARAM_NOTNULL (ctx);
@@ -136,11 +102,7 @@ static void vgraphics_drawrect_border (struct vgraphics * ctx, float x, float y,
 	vgraphics_drawrect (ctx, w+x,   y, t, h, l);//Draw right border
 	vgraphics_drawrect (ctx,   x, y+h, w, t, l);//Draw top border
 }
-
-
-
-
-
+*/
 
 
 

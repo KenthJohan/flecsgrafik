@@ -88,7 +88,14 @@ typedef struct
 {
 	float u;
 	float v;
-} uv_2f32;
+	float w;
+	float h;
+} uvwh_4f32;
+
+typedef struct
+{
+	uint32_t layer;
+} texture_layer;
 
 typedef struct
 {
@@ -100,9 +107,13 @@ ECS_COMPONENT_DECLARE(position_4f32);
 ECS_COMPONENT_DECLARE(world_position_4f32);
 ECS_COMPONENT_DECLARE(rectangle_2f32);
 ECS_COMPONENT_DECLARE(window_rectangle_2f32);
-ECS_COMPONENT_DECLARE(uv_2f32);
+ECS_COMPONENT_DECLARE(uvwh_4f32);
 ECS_COMPONENT_DECLARE(text_cstring);
+ECS_COMPONENT_DECLARE(texture_layer);
 
+
+ECS_TAG_DECLARE(draw_rectangle);
+ECS_TAG_DECLARE(draw_text);
 
 
 
@@ -130,8 +141,8 @@ static void sys_cascade_transform (ecs_iter_t *it)
 		{
 			wp[i].x = p[i].x;
 			wp[i].y = p[i].y;
-			char const * name = ecs_get_name(it->world, it->entities[i]);
-			printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].x, wp[i].y);
+			//char const * name = ecs_get_name(it->world, it->entities[i]);
+			//printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].x, wp[i].y);
 		}
 	}
 	else
@@ -140,44 +151,48 @@ static void sys_cascade_transform (ecs_iter_t *it)
 		{
 			wp[i].x = parent_wp->x + p[i].x;
 			wp[i].y = parent_wp->y + p[i].y;
-			char const * name = ecs_get_name(it->world, it->entities[i]);
-			printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].x, wp[i].y);
+			//char const * name = ecs_get_name(it->world, it->entities[i]);
+			//printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].x, wp[i].y);
 		}
 	}
 }
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static void sys_draw_rectangle (ecs_iter_t *it)
 {
-	world_position_4f32 *wp = ecs_term (it, world_position_4f32, 1);
-	rectangle_2f32       *r = ecs_term (it, rectangle_2f32, 2);
-	uv_2f32             *uv = ecs_term (it, uv_2f32, 3);//Optional
-	window_rectangle_2f32 *win = ecs_term(it, window_rectangle_2f32, 4);
-	if (uv)
+	world_position_4f32    *wp = ecs_term (it, world_position_4f32, 1);
+	rectangle_2f32          *r = ecs_term (it, rectangle_2f32, 2);
+	uvwh_4f32              *uv = ecs_term (it, uvwh_4f32, 3);
+	texture_layer    *texlayer = ecs_term (it, texture_layer, 4);
+	window_rectangle_2f32 *win = ecs_term (it, window_rectangle_2f32, 5);//Singleton
+	for (int i = 0; i < it->count; i++)
 	{
-		for (int i = 0; i < it->count; i ++)
-		{
-			//printf("{.w = %f, .h = %f} {.w = %f, .h = %f}\n",win->w, win->h, r[i].w, r[i].h);
-			float x = (wp[i].x / win->w*2.0f) - 1.0f;
-			float y = (wp[i].y / win->h*2.0f) - 1.0f;
-			float w = 2.0f*r[i].w / win->w;
-			float h = 2.0f*r[i].h / win->h;
-			float l = 2.0f;//Texture layer. 2 = random color texture.
-			vgraphics_drawrect1 (&main_vgraphics2d, x, y, w, h, l, uv[i].u, uv[i].v);
-		}
-	}
-	else
-	{
-		for (int i = 0; i < it->count; i ++)
-		{
-			float x = (wp[i].x / win->w*2.0f) - 1.0f;
-			float y = (wp[i].y / win->h*2.0f) - 1.0f;
-			float w = 2*r[i].w / win->w;
-			float h = 2*r[i].h / win->h;
-			float l = 1.0f;//Texture layer. 1 = fpsplot.
-			vgraphics_drawrect (&main_vgraphics2d, x, y, w, h, l);
-		}
+		//printf("{.w = %f, .h = %f} {.w = %f, .h = %f}\n",win->w, win->h, r[i].w, r[i].h);
+		float x = (wp[i].x / win->w) * 2.0f - 1.0f;
+		float y = (wp[i].y / win->h) * 2.0f - 1.0f;
+		float w = 2.0f*r[i].w / win->w;
+		float h = 2.0f*r[i].h / win->h;
+		float l = texlayer[i].layer;
+		float u = uv[i].u;
+		float v = uv[i].v;
+		float du = uv[i].w;
+		float dv = uv[i].h;
+		vgraphics_drawrect_uv (&main_vgraphics2d, x, y, w, h, u, v, du, dv, l);
 	}
 }
 
@@ -187,15 +202,17 @@ static void sys_draw_text (ecs_iter_t *it)
 {
 	world_position_4f32    *wp = ecs_term (it, world_position_4f32, 1);
 	text_cstring            *r = ecs_term (it, text_cstring, 2);
-	window_rectangle_2f32 *win = ecs_term (it, window_rectangle_2f32, 3);
-	for (int i = 0; i < it->count; i ++)
+	rectangle_2f32        *rec = ecs_term (it, rectangle_2f32, 3);
+	texture_layer    *texlayer = ecs_term (it, texture_layer, 4);
+	window_rectangle_2f32 *win = ecs_term (it, window_rectangle_2f32, 5);//Singleton
+	for (int i = 0; i < it->count; i++)
 	{
-		float x = (wp[i].x / win->w*2.0f) - 1.0f;
-		float y = (wp[i].y / win->h*2.0f) - 1.0f;
+		float x = (wp[i].x / win->w) * 2.0f - 1.0f;
+		float y = (wp[i].y / win->h) * 2.0f - 1.0f;
 		float z = 0.0f;
-		float w = 100.0f/(main_textcontext.pixel_width*win->w);
-		float h = 100.0f/(main_textcontext.pixel_height*win->h);
-		float l = 0.0f; //Texture layer. 0 = Font atlas texture.
+		float w = rec[i].w / (main_textcontext.pixel_width*win->w);
+		float h = rec[i].h / (main_textcontext.pixel_height*win->h);
+		float l = texlayer[i].layer;
 		float line_distance = -0.1f;
 		vgraphics_drawtext (&main_vgraphics2d, main_textcontext.c, &main_textcontext.atlas, x, y, z, w, h, l, line_distance, r[i].text);
 	}
@@ -222,12 +239,16 @@ int main (int argc, char * argv[])
 	ASSERT (argv);
 
 	ecs_world_t *world = ecs_init_w_args(argc, argv);
-	ECS_COMPONENT_DEFINE(world, position_4f32);
-	ECS_COMPONENT_DEFINE(world, world_position_4f32);
-	ECS_COMPONENT_DEFINE(world, rectangle_2f32);
-	ECS_COMPONENT_DEFINE(world, window_rectangle_2f32);
-	ECS_COMPONENT_DEFINE(world, uv_2f32);
-	ECS_COMPONENT_DEFINE(world, text_cstring);
+	ECS_COMPONENT_DEFINE (world, position_4f32);
+	ECS_COMPONENT_DEFINE (world, world_position_4f32);
+	ECS_COMPONENT_DEFINE (world, rectangle_2f32);
+	ECS_COMPONENT_DEFINE (world, window_rectangle_2f32);
+	ECS_COMPONENT_DEFINE (world, uvwh_4f32);
+	ECS_COMPONENT_DEFINE (world, text_cstring);
+	ECS_COMPONENT_DEFINE (world, texture_layer);
+
+	ECS_TAG_DEFINE (world, draw_rectangle);
+	ECS_TAG_DEFINE (world, draw_text);
 
 	srand (42);
 	setbuf (stdout, NULL);
@@ -308,16 +329,19 @@ int main (int argc, char * argv[])
 
 
 	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:world_position_4f32, world_position_4f32, position_4f32);
-	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, world_position_4f32, rectangle_2f32, ?uv_2f32, $window_rectangle_2f32);
-	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, world_position_4f32, text_cstring, $window_rectangle_2f32);
+	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, world_position_4f32, rectangle_2f32, uvwh_4f32, texture_layer, $window_rectangle_2f32, draw_rectangle);
+	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, world_position_4f32, text_cstring, rectangle_2f32, texture_layer, $window_rectangle_2f32, draw_text);
 
 
 	{
 		ecs_entity_t e = ecs_set_name(world, 0, "fpsplot");
 		ecs_add(world, e, world_position_4f32);
 		ecs_add(world, e, window_rectangle_2f32);//Singleton
+		ecs_add(world, e, draw_rectangle);//Tag
 		ecs_set(world, e, position_4f32, {10, 10, 0, 0});
-		ecs_set(world, e, rectangle_2f32, {WIN_W-10, 100});
+		ecs_set(world, e, rectangle_2f32, {WIN_W-20, 100});
+		ecs_set(world, e, uvwh_4f32, {0.0f, 0.0f, 1.0f, 1.0f});
+		ecs_set(world, e, texture_layer, {1});
 	}
 
 	ecs_entity_t e1 = ecs_set_name(world, 0, "box1");
@@ -327,26 +351,35 @@ int main (int argc, char * argv[])
 
 	ecs_add(world, e1, world_position_4f32);
 	ecs_add(world, e1, window_rectangle_2f32);//Singleton
+	ecs_add(world, e1, draw_rectangle);//Tag
 	ecs_set(world, e1, position_4f32, {10, 300, 0, 0});
 	ecs_set(world, e1, rectangle_2f32, {200, 100});
-	ecs_set(world, e1, uv_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
+	ecs_set(world, e1, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
+	ecs_set(world, e1, texture_layer, {2});
 
 	ecs_add(world, e2, world_position_4f32);
 	ecs_add(world, e2, window_rectangle_2f32);//Singleton
+	ecs_add(world, e2, draw_rectangle);//Tag
 	ecs_set(world, e2, position_4f32, {5, 100-40, 0, 0});
 	ecs_set(world, e2, rectangle_2f32, {90, 40});
-	ecs_set(world, e2, uv_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
+	ecs_set(world, e2, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
+	ecs_set(world, e2, texture_layer, {2});
 
 	ecs_add(world, e3, world_position_4f32);
 	ecs_add(world, e3, window_rectangle_2f32);//Singleton
+	ecs_add(world, e3, draw_rectangle);//Tag
 	ecs_set(world, e3, position_4f32, {0, 0, 0, 0});
 	ecs_set(world, e3, rectangle_2f32, {5, 5});
-	ecs_set(world, e3, uv_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
+	ecs_set(world, e3, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
+	ecs_set(world, e3, texture_layer, {2});
 
 	ecs_add(world, e4, world_position_4f32);
 	ecs_add(world, e4, window_rectangle_2f32);//Singleton
+	ecs_add(world, e4, draw_text);//Tag
+	ecs_set(world, e4, rectangle_2f32, {40.0f, 40.0f});
 	ecs_set(world, e4, position_4f32, {0, 0, 0, 0});
 	ecs_set(world, e4, text_cstring, {"Hello"});
+	ecs_set(world, e4, texture_layer, {0});
 
 	ecs_add_pair(world, e2, EcsChildOf, e1);
 	ecs_add_pair(world, e3, EcsChildOf, e1);
