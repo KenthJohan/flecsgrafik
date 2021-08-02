@@ -62,7 +62,7 @@ typedef struct
 	float y;
 	float z;
 	float w;
-} Position_4f32;
+} position_4f32;
 
 typedef struct
 {
@@ -70,32 +70,38 @@ typedef struct
 	float y;
 	float z;
 	float w;
-} World_Position_4f32;
+} world_position_4f32;
 
 typedef struct
 {
 	float w;
 	float h;
-} Rectangle_2f32;
+} rectangle_2f32;
 
 typedef struct
 {
 	float w;
 	float h;
-} Window_Rectangle_2f32;
+} window_rectangle_2f32;
 
 typedef struct
 {
 	float u;
 	float v;
-} uv_coordinate_2f32;
+} uv_2f32;
+
+typedef struct
+{
+	char * text;
+} text_cstring;
 
 
-ECS_COMPONENT_DECLARE(Position_4f32);
-ECS_COMPONENT_DECLARE(World_Position_4f32);
-ECS_COMPONENT_DECLARE(Rectangle_2f32);
-ECS_COMPONENT_DECLARE(Window_Rectangle_2f32);
-ECS_COMPONENT_DECLARE(uv_coordinate_2f32);
+ECS_COMPONENT_DECLARE(position_4f32);
+ECS_COMPONENT_DECLARE(world_position_4f32);
+ECS_COMPONENT_DECLARE(rectangle_2f32);
+ECS_COMPONENT_DECLARE(window_rectangle_2f32);
+ECS_COMPONENT_DECLARE(uv_2f32);
+ECS_COMPONENT_DECLARE(text_cstring);
 
 
 
@@ -104,7 +110,8 @@ ECS_COMPONENT_DECLARE(uv_coordinate_2f32);
 
 struct glx_texlist main_texlist = {};
 struct glx_vao main_vao = {.capacity = 1000000};
-struct vgraphics main_vgraphics = {.capacity = 1000000};
+struct vgraphics main_vgraphics3d = {.capacity = 1000000};
+struct vgraphics main_vgraphics2d = {.capacity = 1000000};
 struct gtext1_context main_textcontext = {0};
 GLint uniform_mvp;
 
@@ -112,20 +119,19 @@ GLint uniform_mvp;
 
 
 
-void Transform(ecs_iter_t *it)
+static void sys_cascade_transform (ecs_iter_t *it)
 {
-	/* Get the two columns from the system signature */
-	World_Position_4f32 *parent_wp = ecs_term(it, World_Position_4f32, 1);
-	World_Position_4f32 *wp = ecs_term(it, World_Position_4f32, 2);
-	Position_4f32 *p = ecs_term(it, Position_4f32, 3);
-
+	world_position_4f32 *parent_wp = ecs_term (it, world_position_4f32, 1);
+	world_position_4f32        *wp = ecs_term (it, world_position_4f32, 2);
+	position_4f32               *p = ecs_term (it, position_4f32, 3);
 	if (!parent_wp)
 	{
 		for (int i = 0; i < it->count; i ++)
 		{
 			wp[i].x = p[i].x;
 			wp[i].y = p[i].y;
-			//printf("%s transformed to {.x = %f, .y = %f} <<root>>\n",ecs_get_name(it->world, it->entities[i]),wp[i].x, wp[i].y);
+			char const * name = ecs_get_name(it->world, it->entities[i]);
+			printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].x, wp[i].y);
 		}
 	}
 	else
@@ -134,37 +140,66 @@ void Transform(ecs_iter_t *it)
 		{
 			wp[i].x = parent_wp->x + p[i].x;
 			wp[i].y = parent_wp->y + p[i].y;
-			//printf("%s transformed to {.x = %f, .y = %f} <<child>>\n",ecs_get_name(it->world, it->entities[i]),wp[i].x, wp[i].y);
+			char const * name = ecs_get_name(it->world, it->entities[i]);
+			printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].x, wp[i].y);
 		}
 	}
 }
 
 
 
-void Draw(ecs_iter_t *it)
+static void sys_draw_rectangle (ecs_iter_t *it)
 {
-	World_Position_4f32 *wp = ecs_term(it, World_Position_4f32, 1);
-	Rectangle_2f32 *r = ecs_term(it, Rectangle_2f32, 2);
-	uv_coordinate_2f32 *uv = ecs_term(it, uv_coordinate_2f32, 3);
-	Window_Rectangle_2f32 *win = ecs_term(it, Window_Rectangle_2f32, 4);
-	for (int i = 0; i < it->count; i ++)
+	world_position_4f32 *wp = ecs_term (it, world_position_4f32, 1);
+	rectangle_2f32       *r = ecs_term (it, rectangle_2f32, 2);
+	uv_2f32             *uv = ecs_term (it, uv_2f32, 3);//Optional
+	window_rectangle_2f32 *win = ecs_term(it, window_rectangle_2f32, 4);
+	if (uv)
 	{
-		//printf("{.w = %f, .h = %f} {.w = %f, .h = %f}\n",win->w, win->h, r[i].w, r[i].h);
-		float x = (wp[i].x / win->w) - 1.0f;
-		float y = (wp[i].y / win->h) - 1.0f;
-		float w = r[i].w / win->w;
-		float h = r[i].h / win->h;
-		vgraphics_drawrect1 (&main_vgraphics, x, y, w, h, 2, uv[i].u, uv[i].v);
+		for (int i = 0; i < it->count; i ++)
+		{
+			//printf("{.w = %f, .h = %f} {.w = %f, .h = %f}\n",win->w, win->h, r[i].w, r[i].h);
+			float x = (wp[i].x / win->w*2.0f) - 1.0f;
+			float y = (wp[i].y / win->h*2.0f) - 1.0f;
+			float w = 2.0f*r[i].w / win->w;
+			float h = 2.0f*r[i].h / win->h;
+			float l = 2.0f;//Texture layer. 2 = random color texture.
+			vgraphics_drawrect1 (&main_vgraphics2d, x, y, w, h, l, uv[i].u, uv[i].v);
+		}
 	}
-
-	m4f32 m;
-	m = (m4f32)M4F32_IDENTITY;
-	glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, m.m);
-	glx_vao_flush (&main_vao, &main_vgraphics);
+	else
+	{
+		for (int i = 0; i < it->count; i ++)
+		{
+			float x = (wp[i].x / win->w*2.0f) - 1.0f;
+			float y = (wp[i].y / win->h*2.0f) - 1.0f;
+			float w = 2*r[i].w / win->w;
+			float h = 2*r[i].h / win->h;
+			float l = 1.0f;//Texture layer. 1 = fpsplot.
+			vgraphics_drawrect (&main_vgraphics2d, x, y, w, h, l);
+		}
+	}
 }
 
 
 
+static void sys_draw_text (ecs_iter_t *it)
+{
+	world_position_4f32    *wp = ecs_term (it, world_position_4f32, 1);
+	text_cstring            *r = ecs_term (it, text_cstring, 2);
+	window_rectangle_2f32 *win = ecs_term (it, window_rectangle_2f32, 3);
+	for (int i = 0; i < it->count; i ++)
+	{
+		float x = (wp[i].x / win->w*2.0f) - 1.0f;
+		float y = (wp[i].y / win->h*2.0f) - 1.0f;
+		float z = 0.0f;
+		float w = 100.0f/(main_textcontext.pixel_width*win->w);
+		float h = 100.0f/(main_textcontext.pixel_height*win->h);
+		float l = 0.0f; //Texture layer. 0 = Font atlas texture.
+		float line_distance = -0.1f;
+		vgraphics_drawtext (&main_vgraphics2d, main_textcontext.c, &main_textcontext.atlas, x, y, z, w, h, l, line_distance, r[i].text);
+	}
+}
 
 
 
@@ -187,11 +222,12 @@ int main (int argc, char * argv[])
 	ASSERT (argv);
 
 	ecs_world_t *world = ecs_init_w_args(argc, argv);
-	ECS_COMPONENT_DEFINE(world, Position_4f32);
-	ECS_COMPONENT_DEFINE(world, World_Position_4f32);
-	ECS_COMPONENT_DEFINE(world, Rectangle_2f32);
-	ECS_COMPONENT_DEFINE(world, Window_Rectangle_2f32);
-	ECS_COMPONENT_DEFINE(world, uv_coordinate_2f32);
+	ECS_COMPONENT_DEFINE(world, position_4f32);
+	ECS_COMPONENT_DEFINE(world, world_position_4f32);
+	ECS_COMPONENT_DEFINE(world, rectangle_2f32);
+	ECS_COMPONENT_DEFINE(world, window_rectangle_2f32);
+	ECS_COMPONENT_DEFINE(world, uv_2f32);
+	ECS_COMPONENT_DEFINE(world, text_cstring);
 
 	srand (42);
 	setbuf (stdout, NULL);
@@ -251,7 +287,8 @@ int main (int argc, char * argv[])
 
 
 	glx_vao_init (&main_vao);
-	vgraphics_init (&main_vgraphics);
+	vgraphics_init (&main_vgraphics3d);
+	vgraphics_init (&main_vgraphics2d);
 
 
 
@@ -270,28 +307,50 @@ int main (int argc, char * argv[])
 
 
 
-	ECS_SYSTEM (world, Transform, EcsOnUpdate, CASCADE:World_Position_4f32, World_Position_4f32, Position_4f32);
-	ECS_SYSTEM (world, Draw, EcsOnUpdate, World_Position_4f32, Rectangle_2f32, uv_coordinate_2f32, $Window_Rectangle_2f32);
+	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:world_position_4f32, world_position_4f32, position_4f32);
+	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, world_position_4f32, rectangle_2f32, ?uv_2f32, $window_rectangle_2f32);
+	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, world_position_4f32, text_cstring, $window_rectangle_2f32);
 
 
+	{
+		ecs_entity_t e = ecs_set_name(world, 0, "fpsplot");
+		ecs_add(world, e, world_position_4f32);
+		ecs_add(world, e, window_rectangle_2f32);//Singleton
+		ecs_set(world, e, position_4f32, {10, 10, 0, 0});
+		ecs_set(world, e, rectangle_2f32, {WIN_W-10, 100});
+	}
 
-	ecs_entity_t e1 = ecs_set_name(world, 0, "e1");
-	ecs_entity_t e2 = ecs_set_name(world, 0, "e2");
+	ecs_entity_t e1 = ecs_set_name(world, 0, "box1");
+	ecs_entity_t e2 = ecs_set_name(world, 0, "box2");
+	ecs_entity_t e3 = ecs_set_name(world, 0, "box3");
+	ecs_entity_t e4 = ecs_set_name(world, 0, "text1");
 
-	ecs_add(world, e1, World_Position_4f32);
-	ecs_add(world, e1, Window_Rectangle_2f32);
-	ecs_set(world, e1, Position_4f32, {10, 10, 0, 0});
-	ecs_set(world, e1, Rectangle_2f32, {200, 100});
-	ecs_set(world, e1, uv_coordinate_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
+	ecs_add(world, e1, world_position_4f32);
+	ecs_add(world, e1, window_rectangle_2f32);//Singleton
+	ecs_set(world, e1, position_4f32, {10, 300, 0, 0});
+	ecs_set(world, e1, rectangle_2f32, {200, 100});
+	ecs_set(world, e1, uv_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
 
-	ecs_add(world, e2, World_Position_4f32);
-	ecs_add(world, e2, Window_Rectangle_2f32);
-	ecs_set(world, e2, Position_4f32, {10, 0, 0, 0});
-	ecs_set(world, e2, Rectangle_2f32, {50, 50});
-	ecs_set(world, e2, uv_coordinate_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
+	ecs_add(world, e2, world_position_4f32);
+	ecs_add(world, e2, window_rectangle_2f32);//Singleton
+	ecs_set(world, e2, position_4f32, {5, 100-40, 0, 0});
+	ecs_set(world, e2, rectangle_2f32, {90, 40});
+	ecs_set(world, e2, uv_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
 
+	ecs_add(world, e3, world_position_4f32);
+	ecs_add(world, e3, window_rectangle_2f32);//Singleton
+	ecs_set(world, e3, position_4f32, {0, 0, 0, 0});
+	ecs_set(world, e3, rectangle_2f32, {5, 5});
+	ecs_set(world, e3, uv_2f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX});
+
+	ecs_add(world, e4, world_position_4f32);
+	ecs_add(world, e4, window_rectangle_2f32);//Singleton
+	ecs_set(world, e4, position_4f32, {0, 0, 0, 0});
+	ecs_set(world, e4, text_cstring, {"Hello"});
 
 	ecs_add_pair(world, e2, EcsChildOf, e1);
+	ecs_add_pair(world, e3, EcsChildOf, e1);
+	ecs_add_pair(world, e4, EcsChildOf, e2);
 
 
 
@@ -304,7 +363,7 @@ int main (int argc, char * argv[])
 			int w;
 			int h;
 			SDL_GetWindowSize (window, &w, &h);
-			ecs_singleton_set(world, Window_Rectangle_2f32, {(float)w, (float)h});
+			ecs_singleton_set(world, window_rectangle_2f32, {(float)w, (float)h});
 		}
 
 		SDL_Event event;
@@ -356,43 +415,29 @@ int main (int argc, char * argv[])
 					//vgraphics_drawtextf (&vg, tctx.c, &tctx.atlas, sin(i*0.1f + counter*0.01f) - j, cos(i*0.1f + counter*0.01f), i * -0.1f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, "%jx", i*j*counter);
 				}
 			}
-
-
-
 		}
 
 
+		gui_profiler_draw (&gprofiler, &main_textcontext);
+		ecs_progress (world, 0);
 
 
 
-
-		if (0)
 		{
+			//Draw GUI
+			m4f32 m = (m4f32)M4F32_IDENTITY;
+			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, m.m);
+			glx_vao_flush (&main_vao, &main_vgraphics2d);
+		}
+
+		{
+			//Draw vertices from camera perspective
 			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
 			glBindTexture (GL_TEXTURE_2D_ARRAY, main_texlist.tex[0]);
-			glx_vao_flush (&main_vao, &main_vgraphics);
+			glx_vao_flush (&main_vao, &main_vgraphics3d);
 		}
 
 
-		if (1)
-		{
-			gui_profiler_draw (&gprofiler, &main_textcontext);
-			//vgraphics_drawtextf (&vg, tctx.c, &tctx.atlas, -1.0f, -0.9f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0, "FPS: %3.3f, %3.3f", (float)SDL_GetPerformanceFrequency() / gprofiler.a[0], (gprofiler.a[0] * 1000.0) / SDL_GetPerformanceFrequency());
-			vgraphics_drawrect_border (&main_vgraphics, 0.0f, -2.0f, 1.0f, 1.0f, 2.0f);
-			vgraphics_drawrect (&main_vgraphics, -1.0f, -1.0f, 1.0f, 0.2f, 1.0f);
-			vgraphics_drawtext (&main_vgraphics, main_textcontext.c, &main_textcontext.atlas, -1.0f, 0.0f, 0.0f, 0.1f/48.0f, 0.1f/48.0f, 0.0f, -0.1f, "A B C\nD-E-F\n\n1_2_3\n!#&");
-			int w;
-			int h;
-			SDL_GetWindowSize (window, &w, &h);
-			//gui_draw (&mygui, &vg, w, h);
-			m4f32 m;
-			m = (m4f32)M4F32_IDENTITY;
-			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, m.m);
-			glx_vao_flush (&main_vao, &main_vgraphics);
-		}
-
-
-		ecs_progress (world, 0);
 
 		//SDL_Delay (10);
 		SDL_GL_SwapWindow (window);
