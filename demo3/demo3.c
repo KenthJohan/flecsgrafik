@@ -20,6 +20,7 @@
 #include "textedit_sample.h"
 #include "../flecs/flecs.h"
 #include "gui.h"
+#include "types.h"
 
 
 #include <SDL2/SDL.h>
@@ -36,6 +37,9 @@
 #define WIN_W 640
 #define WIN_H 480
 #define WIN_TITLE "Demo2"
+#define TEXLAYER_FONT 0
+#define TEXLAYER_FPSPLOT 1
+#define TEXLAYER_RANDOM 2
 
 /*
 static void gui_draw (struct gui_context * ctx, struct vgraphics * graphics, int sw, int sh)
@@ -56,87 +60,7 @@ static void gui_draw (struct gui_context * ctx, struct vgraphics * graphics, int
 }
 */
 
-typedef struct
-{
-	float x;
-	float y;
-	float z;
-	float w;
-} position_4f32;
 
-typedef struct
-{
-	float x;
-	float y;
-	float z;
-	float w;
-} world_position_4f32;
-
-typedef struct
-{
-	float w;
-	float h;
-} rectangle_2f32;
-
-typedef struct
-{
-	float w;
-	float h;
-} world_rectangle_2f32;
-
-typedef struct
-{
-	float w;
-	float h;
-} textsize_2f32;
-
-typedef struct
-{
-	float w;
-	float h;
-} window_rectangle_2f32;
-
-typedef struct
-{
-	float l;
-	float r;
-	float b;
-	float t;
-} padding_4f32;
-
-typedef struct
-{
-	float u;
-	float v;
-	float w;
-	float h;
-} uvwh_4f32;
-
-typedef struct
-{
-	uint32_t layer;
-} texture_layer;
-
-typedef struct
-{
-	char * text;
-} text_cstring;
-
-
-ECS_COMPONENT_DECLARE(world_position_4f32);
-ECS_COMPONENT_DECLARE(world_rectangle_2f32);
-ECS_COMPONENT_DECLARE(position_4f32);
-ECS_COMPONENT_DECLARE(rectangle_2f32);
-ECS_COMPONENT_DECLARE(window_rectangle_2f32);
-ECS_COMPONENT_DECLARE(uvwh_4f32);
-ECS_COMPONENT_DECLARE(padding_4f32);
-ECS_COMPONENT_DECLARE(text_cstring);
-ECS_COMPONENT_DECLARE(texture_layer);
-ECS_COMPONENT_DECLARE(textsize_2f32);
-
-
-ECS_TAG_DECLARE(draw_rectangle);
-ECS_TAG_DECLARE(draw_text);
 
 
 
@@ -151,124 +75,60 @@ GLint uniform_mvp;
 
 
 
-
-
 static void sys_cascade_transform (ecs_iter_t *it)
 {
-	world_position_4f32 *parent_wp = ecs_term (it, world_position_4f32, 1);
-	world_position_4f32        *wp = ecs_term (it, world_position_4f32, 2);
-	position_4f32               *p = ecs_term (it, position_4f32, 3);
-	if (!parent_wp)
+	position_4f32        *p1 = ecs_term (it, position_4f32, 1);
+	position_4f32        *p2 = ecs_term (it, position_4f32, 2);
+	local_position_4f32  *p3 = ecs_term (it, local_position_4f32, 3);
+	//window_rectangle_2f32 *w = ecs_term (it, window_rectangle_2f32, 4);//Singleton
+	if (p1)
 	{
 		for (int i = 0; i < it->count; i ++)
 		{
-			wp[i].x = p[i].x;
-			wp[i].y = p[i].y;
-			//char const * name = ecs_get_name(it->world, it->entities[i]);
-			//printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].x, wp[i].y);
-		}
-	}
-	else
-	{
-		for (int i = 0; i < it->count; i ++)
-		{
-			wp[i].x = parent_wp->x + p[i].x;
-			wp[i].y = parent_wp->y + p[i].y;
+
+			/*
+			float y0 = (-wp[i].y+win->h-rec[i].h);
+			float x = (wp[i].x / win->w) * 2.0f - 1.0f;
+			float y = (y0 / win->h) * 2.0f - 1.0f;
+			float z = 0.0f;
+			*/
+
+
+			p2[i].x = p1->x + p3[i].x;
+			p2[i].y = p1->y + p3[i].y;
 			//char const * name = ecs_get_name(it->world, it->entities[i]);
 			//printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].x, wp[i].y);
 		}
 	}
-}
-
-
-static void sys_cascade_transform1 (ecs_iter_t *it)
-{
-	world_rectangle_2f32 *parent_wp = ecs_term (it, world_rectangle_2f32, 1);
-	world_rectangle_2f32        *wp = ecs_term (it, world_rectangle_2f32, 2);
-	rectangle_2f32               *p = ecs_term (it, rectangle_2f32, 3);
-	if (!parent_wp)
-	{
-		for (int i = 0; i < it->count; i ++)
-		{
-			wp[i].w = p[i].w;
-			wp[i].h = p[i].h;
-			//char const * name = ecs_get_name(it->world, it->entities[i]);
-			//printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].w, wp[i].h);
-		}
-	}
 	else
 	{
 		for (int i = 0; i < it->count; i ++)
 		{
-			wp[i].w = MIN(parent_wp->w, p[i].w);
-			wp[i].h = MIN(parent_wp->h, p[i].h);
+			p2[i].x = p3[i].x;
+			p2[i].y = p3[i].y;
 			//char const * name = ecs_get_name(it->world, it->entities[i]);
-			//printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].w, wp[i].w);
+			//printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].x, wp[i].y);
 		}
 	}
 }
-
-
-static void sys_cascade_transform2 (ecs_iter_t *it)
-{
-	world_rectangle_2f32        *wp = ecs_term (it, world_rectangle_2f32, 1);
-	padding_4f32                 *p = ecs_term (it, padding_4f32, 2);
-	for (int i = 0; i < it->count; i ++)
-	{
-		wp[i].w -= p[i].l + p[i].r;
-		wp[i].h -= p[i].t + p[i].b;
-	}
-}
-
-
-static void sys_cascade_transform3 (ecs_iter_t *it)
-{
-	world_position_4f32         *wp = ecs_term (it, world_position_4f32, 1);
-	padding_4f32                 *p = ecs_term (it, padding_4f32, 2);
-	for (int i = 0; i < it->count; i ++)
-	{
-		wp[i].x += p[i].l;
-		wp[i].y += p[i].b;
-	}
-}
-
-
-static void sys_cascade_transform4 (ecs_iter_t *it)
-{
-	world_rectangle_2f32        *wp = ecs_term (it, world_rectangle_2f32, 1);
-	position_4f32                *p = ecs_term (it, position_4f32, 2);
-	for (int i = 0; i < it->count; i ++)
-	{
-		//if (wp[i].w >= p[i].x)
-		{
-			wp[i].w -= p[i].x;
-		}
-		//if (wp[i].h >= p[i].y)
-		{
-			wp[i].h -= p[i].y;
-		}
-		ASSERT (wp[i].w >= 0.0f);
-		ASSERTF (wp[i].h >= 0.0f, "%f %f", wp[i].h, p[i].y);
-	}
-}
-
-
 
 
 
 
 static void sys_draw_rectangle (ecs_iter_t *it)
 {
-	world_position_4f32    *wp = ecs_term (it, world_position_4f32, 1);
-	world_rectangle_2f32    *r = ecs_term (it, world_rectangle_2f32, 2);
+	// position_4f32, rectangle_2f32, uvwh_4f32, texture_layer, $window_rectangle_2f32, draw_rectangle
+	position_4f32          *wp = ecs_term (it, position_4f32, 1);
+	rectangle_2f32          *r = ecs_term (it, rectangle_2f32, 2);
 	uvwh_4f32              *uv = ecs_term (it, uvwh_4f32, 3);
 	texture_layer    *texlayer = ecs_term (it, texture_layer, 4);
 	window_rectangle_2f32 *win = ecs_term (it, window_rectangle_2f32, 5);//Singleton
 	for (int i = 0; i < it->count; i++)
 	{
+		float y0 = (-wp[i].y+win->h-r[i].h);
 		//printf("{.w = %f, .h = %f} {.w = %f, .h = %f}\n",win->w, win->h, r[i].w, r[i].h);
 		float x = (wp[i].x / win->w) * 2.0f - 1.0f;
-		float y = (wp[i].y / win->h) * 2.0f - 1.0f;
+		float y = (y0 / win->h) * 2.0f - 1.0f;
 		float w = 2.0f*r[i].w / win->w;
 		float h = 2.0f*r[i].h / win->h;
 		float l = texlayer[i].layer;
@@ -281,23 +141,24 @@ static void sys_draw_rectangle (ecs_iter_t *it)
 }
 
 
-
 static void sys_draw_text (ecs_iter_t *it)
 {
-	world_position_4f32    *wp = ecs_term (it, world_position_4f32, 1);
+	//position_4f32, text_cstring, textsize_2f32, texture_layer, $window_rectangle_2f32, draw_text
+	position_4f32          *wp = ecs_term (it, position_4f32, 1);
 	text_cstring         *text = ecs_term (it, text_cstring, 2);
 	textsize_2f32         *rec = ecs_term (it, textsize_2f32, 3);
 	texture_layer    *texlayer = ecs_term (it, texture_layer, 4);
 	window_rectangle_2f32 *win = ecs_term (it, window_rectangle_2f32, 5);//Singleton
 	for (int i = 0; i < it->count; i++)
 	{
+		float y0 = (-wp[i].y+win->h-rec[i].h);
 		float x = (wp[i].x / win->w) * 2.0f - 1.0f;
-		float y = (wp[i].y / win->h) * 2.0f - 1.0f;
+		float y = (y0 / win->h) * 2.0f - 1.0f;
 		float z = 0.0f;
-		float w = rec[i].w / (main_textcontext.pixel_width*win->w);
-		float h = rec[i].h / (main_textcontext.pixel_height*win->h);
+		float w = (2.0f*rec[i].w) / (main_textcontext.pixel_width*win->w);
+		float h = (2.0f*rec[i].h) / (main_textcontext.pixel_height*win->h);
 		float l = texlayer[i].layer;
-		float line_distance = -0.1f;
+		float line_distance = (2*rec[i].h / win->h) * -1.0f;
 		vgraphics_drawtext (&main_vgraphics2d, main_textcontext.c, &main_textcontext.atlas, x, y, z, w, h, l, line_distance, text[i].text);
 	}
 }
@@ -306,10 +167,62 @@ static void sys_draw_text (ecs_iter_t *it)
 
 
 
+static void gui_update (ecs_world_t *world)
+{
+	ecs_query_t *q = ecs_query_new (world, "PARENT:length_f32");
+	ecs_iter_t it = ecs_query_iter(q);
+	while (ecs_query_next(&it))
+	{
+		length_f32 *p = ecs_term (&it, length_f32, 1);
+		length_f32 *v = ecs_term (&it, length_f32, 2);
+		for (int i = 0; i < it.count; i ++)
+		{
+			//p[i].x += v[i].x;
+			//p[i].y += v[i].y;
+			char const * name = ecs_get_name(world, it.entities[i]);
+			printf ("%s: %f\n", name, p[0].length);
+			//printf ("%s: %f %f\n", name, p[0].length, v[i].length);
 
-#define TEXLAYER_FONT 0
-#define TEXLAYER_FPSPLOT 1
-#define TEXLAYER_RANDOM 2
+
+
+		}
+	}
+}
+
+
+
+
+
+
+static ecs_entity_t gui_spawn_box
+(ecs_world_t *world, char const * name, float x, float y, float w, float h)
+{
+	ecs_entity_t e = ecs_set_name(world, 0, name);
+	ecs_set(world, e, position_4f32, {x, y, 0, 0});
+	ecs_set(world, e, rectangle_2f32, {w, h});
+	ecs_set(world, e, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
+	ecs_set(world, e, texture_layer, {TEXLAYER_RANDOM});
+	ecs_add(world, e, window_rectangle_2f32);//Singleton
+	ecs_add(world, e, draw_rectangle);//Tag
+	return e;
+}
+
+
+static ecs_entity_t gui_spawn_text
+(ecs_world_t *world, char const * name, float x, float y, float w, float h, char const * text)
+{
+	ecs_entity_t e = ecs_set_name(world, 0, name);
+	ecs_set(world, e, local_position_4f32, {x, y, 0, 0});
+	ecs_add(world, e, window_rectangle_2f32);//Singleton
+	ecs_set(world, e, textsize_2f32, {w, h});
+	ecs_set(world, e, position_4f32, {0, 0, 0, 0});
+	ecs_set(world, e, text_cstring, {text});
+	ecs_set(world, e, texture_layer, {TEXLAYER_FONT});
+	ecs_add(world, e, draw_text);//Tag
+	return e;
+}
+
+
 
 
 
@@ -319,28 +232,14 @@ static void sys_draw_text (ecs_iter_t *it)
 
 int main (int argc, char * argv[])
 {
-	printf ("%jd\n", (intmax_t)1);
+	setbuf (stdout, NULL);
+	//printf ("%jd\n", (intmax_t)1);
 	csc_crossos_enable_ansi_color ();
 	ASSERT (argc);
 	ASSERT (argv);
 
 	ecs_world_t *world = ecs_init_w_args(argc, argv);
-	ECS_COMPONENT_DEFINE (world, world_position_4f32);
-	ECS_COMPONENT_DEFINE (world, world_rectangle_2f32);
-	ECS_COMPONENT_DEFINE (world, position_4f32);
-	ECS_COMPONENT_DEFINE (world, rectangle_2f32);
-	ECS_COMPONENT_DEFINE (world, textsize_2f32);
-	ECS_COMPONENT_DEFINE (world, padding_4f32);
-	ECS_COMPONENT_DEFINE (world, window_rectangle_2f32);
-	ECS_COMPONENT_DEFINE (world, uvwh_4f32);
-	ECS_COMPONENT_DEFINE (world, text_cstring);
-	ECS_COMPONENT_DEFINE (world, texture_layer);
-
-	ECS_TAG_DEFINE (world, draw_rectangle);
-	ECS_TAG_DEFINE (world, draw_text);
-
-	srand (42);
-	setbuf (stdout, NULL);
+	types_ecsinit (world);
 
 	uint32_t main_flags = CSC_SDLGLEW_RUNNING;
 
@@ -348,13 +247,10 @@ int main (int argc, char * argv[])
 	SDL_GLContext context;
 	csc_sdlglew_create_window (&window, &context, WIN_TITLE, WIN_X, WIN_Y, WIN_W, WIN_H, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
 
-
 	glEnable (GL_VERTEX_PROGRAM_POINT_SIZE);
 	glLineWidth (4.0f);
-
 	glEnable (GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glDepthFunc(GL_LEQUAL);
@@ -379,6 +275,7 @@ int main (int argc, char * argv[])
 	}
 
 
+
 	GLint program = csc_gl_program_from_files1 (CSC_SRCDIR"shader.glfs;"CSC_SRCDIR"shader.glvs");
 	GLint uniform_tex = glGetUniformLocation (program, "tex0");
 	uniform_mvp = glGetUniformLocation (program, "mvp");
@@ -394,6 +291,7 @@ int main (int argc, char * argv[])
 	main_texlist.texarray[0].l = 3;
 	glx_texlist_setup (&main_texlist);
 	glx_texlist_gen_gradient (&main_texlist, 0, 2);
+
 
 
 	glx_vao_init (&main_vao);
@@ -417,75 +315,56 @@ int main (int argc, char * argv[])
 
 
 
-	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:world_position_4f32, world_position_4f32, position_4f32);
-	ECS_SYSTEM (world, sys_cascade_transform1, EcsOnUpdate, CASCADE:world_rectangle_2f32, world_rectangle_2f32, rectangle_2f32, world_position_4f32);
-	ECS_SYSTEM (world, sys_cascade_transform2, EcsOnUpdate, world_rectangle_2f32, padding_4f32);
-	ECS_SYSTEM (world, sys_cascade_transform3, EcsOnUpdate, world_position_4f32, padding_4f32);
-	ECS_SYSTEM (world, sys_cascade_transform4, EcsOnUpdate, world_rectangle_2f32, position_4f32);
-	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, world_position_4f32, world_rectangle_2f32, uvwh_4f32, texture_layer, $window_rectangle_2f32, draw_rectangle);
-	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, world_position_4f32, text_cstring, textsize_2f32, texture_layer, $window_rectangle_2f32, draw_text);
+	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:position_4f32, position_4f32, local_position_4f32);
+
+	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, position_4f32, rectangle_2f32, uvwh_4f32, texture_layer, $window_rectangle_2f32, draw_rectangle);
+	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, position_4f32, text_cstring, textsize_2f32, texture_layer, $window_rectangle_2f32, draw_text);
+
+
+
+
+	//ECS_SYSTEM (world, sys_cascade_calc, EcsOnUpdate, PARENT:length_f32, length_f32);
+
+
+	/*
+	ecs_entity_t o = ecs_observer_init(world, &(ecs_observer_desc_t){
+	.filter.expr = "length_f32",
+	.events = {EcsOnSet},
+	.callback = sys_cascade_calc,
+	//.ctx = &ctx
+	});
+	*/
+
+
 
 
 	{
 		ecs_entity_t e = ecs_set_name(world, 0, "fpsplot");
-		ecs_add(world, e, world_rectangle_2f32);
-		ecs_add(world, e, world_position_4f32);
 		ecs_add(world, e, window_rectangle_2f32);//Singleton
 		ecs_add(world, e, draw_rectangle);//Tag
-		ecs_set(world, e, world_position_4f32, {10, 10, 0, 0});
+		ecs_set(world, e, position_4f32, {10, 10, 0, 0});
 		ecs_set(world, e, rectangle_2f32, {WIN_W-20, 100});
 		ecs_set(world, e, uvwh_4f32, {0.0f, 0.0f, 1.0f, 1.0f});
 		ecs_set(world, e, texture_layer, {TEXLAYER_FPSPLOT});
 	}
 
-	ecs_entity_t e1 = ecs_set_name(world, 0, "box1");
-	ecs_entity_t e2 = ecs_set_name(world, 0, "box2");
-	ecs_entity_t e3 = ecs_set_name(world, 0, "box3");
-	ecs_entity_t e4 = ecs_set_name(world, 0, "text1");
-
-	ecs_add(world, e1, world_position_4f32);
-	ecs_add(world, e1, world_rectangle_2f32);
-	ecs_add(world, e1, window_rectangle_2f32);//Singleton
-	ecs_set(world, e1, world_position_4f32, {10, 300, 0, 0});
-	ecs_set(world, e1, rectangle_2f32, {200, 100});
-	ecs_set(world, e1, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
-	ecs_set(world, e1, texture_layer, {TEXLAYER_RANDOM});
-	ecs_add(world, e1, draw_rectangle);//Tag
-
-	ecs_add(world, e2, world_position_4f32);
-	ecs_add(world, e2, world_rectangle_2f32);
-	ecs_add(world, e2, window_rectangle_2f32);//Singleton
-	ecs_set(world, e2, position_4f32, {0, 40, 0, 0});
-	ecs_set(world, e2, rectangle_2f32, {60, 60});
-	ecs_set(world, e2, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
-	ecs_set(world, e2, texture_layer, {TEXLAYER_RANDOM});
-	ecs_add(world, e2, draw_rectangle);//Tag
 
 
-	ecs_add(world, e3, world_position_4f32);
-	ecs_add(world, e3, world_rectangle_2f32);
-	ecs_add(world, e3, window_rectangle_2f32);//Singleton
-	ecs_set(world, e3, padding_4f32, {5, 5, 5, 5});
-	ecs_set(world, e3, position_4f32, {40, 0, 0, 0});
-	ecs_set(world, e3, rectangle_2f32, {200, 100});
-	ecs_set(world, e3, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
-	ecs_set(world, e3, texture_layer, {TEXLAYER_RANDOM});
-	ecs_add(world, e3, draw_rectangle);//Tag
 
 
-	ecs_add(world, e4, world_position_4f32);
-	ecs_add(world, e4, world_rectangle_2f32);
-	ecs_add(world, e4, window_rectangle_2f32);//Singleton
-	ecs_set(world, e4, textsize_2f32, {40.0f, 40.0f});
-	ecs_set(world, e4, position_4f32, {0, 0, 0, 0});
-	ecs_set(world, e4, text_cstring, {"Hello\nWorld!"});
-	ecs_set(world, e4, texture_layer, {TEXLAYER_FONT});
-	//ecs_add(world, e4, draw_rectangle);//Tag
-	ecs_add(world, e4, draw_text);//Tag
 
-	ecs_add_pair(world, e2, EcsChildOf, e1);
-	ecs_add_pair(world, e3, EcsChildOf, e1);
-	ecs_add_pair(world, e4, EcsChildOf, e2);
+
+	ecs_entity_t e0 = gui_spawn_box (world, "box1", 0, 0, 300, 100);
+	ecs_entity_t e1 = gui_spawn_box (world, "box2", 0, 0, 200, 60*3);
+	ecs_entity_t e2 = gui_spawn_box (world, "box3", 10, 10, 200, 60*3);
+	ecs_entity_t e3 = gui_spawn_text (world, "text1", 0, 0, 60, 60, "Hellog\nWorgd!\nBagaGa");
+	ecs_add_pair(world, e1, EcsChildOf, e0);
+	ecs_add_pair(world, e2, EcsChildOf, e0);
+	ecs_add_pair(world, e3, EcsChildOf, e2);
+
+
+	//gui_update (world);
+
 
 
 
@@ -510,6 +389,16 @@ int main (int argc, char * argv[])
 		glClearColor (0.2f, 0.3f, 0.3f, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+		if (keyboard [SDL_SCANCODE_0])
+		{
+			ecs_set(world, e0, length_f32, {12});
+		}
+
+		if (keyboard [SDL_SCANCODE_1])
+		{
+			ecs_set(world, e1, length_f32, {13});
+		}
 
 		if(1)
 		{
