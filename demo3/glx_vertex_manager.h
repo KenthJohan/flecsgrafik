@@ -81,8 +81,8 @@ static void vgraphics_drawrect_uv (struct vgraphics * ctx, float x, float y, flo
 	ASSERT_NOTNULL (ctx->v);
 	struct glx_vertex * vertices = ctx->v + ctx->last;
 	uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
-	primf32_make_rectangle4 (vertices->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
-	primf32_make_rectangle4 (vertices->uvl.e, stride, u, v, du, dv, l, 0.0f);
+	primf32_make_rectangle4_xywh (vertices->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
+	primf32_make_rectangle4_xywh (vertices->uvl.e, stride, u, v, du, dv, l, 0.0f);
 
 	//v2f32_vertices6_set_rectangle (v->xyzw.e, stride, x, y, w, h); // Set vertex position
 	//v2f32_vertices6_set_rectangle (v->uvl.e, stride, 0, 0, 1, 1); // Set vertex texture uv coordinate

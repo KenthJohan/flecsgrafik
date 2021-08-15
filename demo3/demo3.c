@@ -83,11 +83,9 @@ static void sys_cascade_transform (ecs_iter_t *it)
 static void sys_cascade_transform (ecs_iter_t *it)
 {
 	position_4f32        *p1 = ecs_term (it, position_4f32, 1);//Parent
-	rectangle_2f32       *pr = ecs_term (it, rectangle_2f32, 2);//Parent
-	position_4f32        *p2 = ecs_term (it, position_4f32, 3);//Child
-	rectangle_2f32       *cr = ecs_term (it, rectangle_2f32, 4);//Parent
-	local_position_4f32  *p3 = ecs_term (it, local_position_4f32, 5);//Child
-	if (p1 && pr)
+	position_4f32        *p2 = ecs_term (it, position_4f32, 2);//Child
+	local_position_4f32  *p3 = ecs_term (it, local_position_4f32, 3);//Child
+	if (p1)
 	{
 		for (int i = 0; i < it->count; i ++)
 		{
@@ -100,8 +98,8 @@ static void sys_cascade_transform (ecs_iter_t *it)
 			*/
 
 
-			p2[i].x = p1[0].x + -p3[i].x + pr[0].w - cr[i].w;
-			p2[i].y = p1[0].y + -p3[i].y + pr[0].h - cr[i].h;
+			p2[i].x = p1[0].x + p3[i].x;
+			p2[i].y = p1[0].y + p3[i].y;
 			//char const * name = ecs_get_name(it->world, it->entities[i]);
 			//printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].x, wp[i].y);
 		}
@@ -118,26 +116,63 @@ static void sys_cascade_transform (ecs_iter_t *it)
 	}
 }
 
+
+static void sys_quad (ecs_iter_t *it)
+{
+	quad_4f32      *q = ecs_term (it, quad_4f32,      1); // Output
+	position_4f32  *p = ecs_term (it, position_4f32,  2); // Input
+	rectangle_2f32 *r = ecs_term (it, rectangle_2f32, 3); // Input
+	float cx = 0.5f;
+	float cy = -0.5f;
+	for (int i = 0; i < it->count; i++)
+	{
+		q[i].a = (position_2f32){p[i].x - (0.5f-cx)*r[i].w, p[i].y - (0.5f-cy)*r[i].h};
+		q[i].b = (position_2f32){p[i].x + (0.5f+cx)*r[i].w, p[i].y + (0.5f+cy)*r[i].h};
+	}
+}
+
+
+
 static void sys_draw_rectangle (ecs_iter_t *it)
 {
-	position_4f32          *wp = ecs_term (it, position_4f32, 1);
-	rectangle_2f32          *r = ecs_term (it, rectangle_2f32, 2);
-	uvwh_4f32              *uv = ecs_term (it, uvwh_4f32, 3);
-	texture_layer    *texlayer = ecs_term (it, texture_layer, 4);
+	quad_4f32               *q = ecs_term (it, quad_4f32, 1);
+	uvwh_4f32              *uv = ecs_term (it, uvwh_4f32, 2);
+	texture_layer          *tl = ecs_term (it, texture_layer, 3);
+	//opengl_vbo            *vbo = ecs_term (it, opengl_vbo, 5);//Shared
+	//glBindBuffer (GL_ARRAY_BUFFER, vbo[0].vbo);
+	//void * ptr = glMapBuffer (GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+	struct glx_vertex * vertices = main_vgraphics2d.v + main_vgraphics2d.last;
+	uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
+
 	for (int i = 0; i < it->count; i++)
 	{
 		//printf("{.w = %f, .h = %f} {.w = %f, .h = %f}\n",win->w, win->h, r[i].w, r[i].h);
-		float x = wp[i].x;
-		float y = wp[i].y;
-		float w = r[i].w;
-		float h = r[i].h;
-		float l = texlayer[i].layer;
+		float ax = q[i].a.x;
+		float ay = q[i].a.y;
+		float bx = q[i].b.x;
+		float by = q[i].b.y;
+		float z = 0.0f;
+		float l = tl[i].layer;
 		float u = uv[i].u;
 		float v = uv[i].v;
 		float du = uv[i].w;
 		float dv = uv[i].h;
-		vgraphics_drawrect_uv (&main_vgraphics2d, x, y, w, h, u, v, du, dv, l);
+		/*
+		ax = 200.0f;
+		ay = 200.0f;
+		bx = 210.0f;
+		by = 300.0f;
+		*/
+		primf32_make6_rectangle4_ab (vertices->xyzw.e, stride, ax, ay, bx, by, z, 0.0f);
+		primf32_make_rectangle4_xywh (vertices->uvl.e, stride, u, v, du, dv, l, 0.0f);
+		vertices += 6;
+
+
+		//primf32_make_rectangle4_xywh (main_vgraphics2d.v->xyzw.e, stride, x, y, w, h, 0.0f, 0.0f);
+		//primf32_make_rectangle4_xywh (vertices->uvl.e, stride, u, v, du, dv, l, 0.0f);
 	}
+	main_vgraphics2d.last += it->count*6;
+	//glUnmapBuffer(GL_ARRAY_BUFFER);
 }
 
 
@@ -192,6 +227,7 @@ static ecs_entity_t gui_spawn_box
 (ecs_world_t *world, char const * name, float x, float y, float w, float h)
 {
 	ecs_entity_t e = ecs_set_name(world, 0, name);
+	ecs_set(world, e, quad_4f32, {{0, 0}, {0, 0}});
 	ecs_set(world, e, position_4f32, {x, y, 0, 0});
 	ecs_set(world, e, local_position_4f32, {x, y, 0, 0});
 	ecs_set(world, e, rectangle_2f32, {w, h});
@@ -309,9 +345,10 @@ int main (int argc, char * argv[])
 
 
 	//ECS_SYSTEM (world, sys_transform1, EcsOnUpdate, position_4f32, local_position_4f32);
-	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:position_4f32, PARENT:rectangle_2f32, position_4f32, rectangle_2f32, local_position_4f32);
+	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:position_4f32, position_4f32, local_position_4f32);
 
-	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, position_4f32, rectangle_2f32, uvwh_4f32, texture_layer, draw_rectangle);
+	ECS_SYSTEM (world, sys_quad, EcsOnUpdate, quad_4f32, position_4f32, rectangle_2f32);
+	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, quad_4f32, uvwh_4f32, texture_layer, draw_rectangle);
 	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, position_4f32, text_cstring, textsize_2f32, texture_layer, draw_text);
 
 
@@ -348,13 +385,13 @@ int main (int argc, char * argv[])
 
 
 
-	ecs_entity_t e0 = gui_spawn_box (world, "box1", 100, 100, 300, 300);
-	ecs_entity_t e1 = gui_spawn_box (world, "box2", 200, 200, 100, 100);
-	ecs_entity_t e2 = gui_spawn_box (world, "box3", -10, -10, 150, 150);
+	ecs_entity_t e0 = gui_spawn_box (world, "box1", 300, 300, 300, 300);
+	ecs_entity_t e1 = gui_spawn_box (world, "box2", 10, -10, 20, 400);
+	ecs_entity_t e2 = gui_spawn_box (world, "box3", 10, -10, 400, 40);
 	ecs_entity_t e3 = gui_spawn_text (world, "text1", 0, 0, 50, 50, "Hellog\nWorgd!\nBagaGa");
 	ecs_add_pair(world, e1, EcsChildOf, e0);
 	ecs_add_pair(world, e2, EcsChildOf, e0);
-	ecs_add_pair(world, e3, EcsChildOf, e2);
+	//ecs_add_pair(world, e3, EcsChildOf, e2);
 
 
 	//gui_update (world);
@@ -386,12 +423,12 @@ int main (int argc, char * argv[])
 
 		if (keyboard [SDL_SCANCODE_0])
 		{
-			ecs_set(world, e0, length_f32, {12});
+			//ecs_set(world, e0, length_f32, {12});
 		}
 
 		if (keyboard [SDL_SCANCODE_1])
 		{
-			ecs_set(world, e1, length_f32, {13});
+			//ecs_set(world, e1, length_f32, {13});
 		}
 
 		if(1)
