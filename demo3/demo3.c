@@ -41,24 +41,7 @@
 #define TEXLAYER_FPSPLOT 1
 #define TEXLAYER_RANDOM 2
 
-/*
-static void gui_draw (struct gui_context * ctx, struct vgraphics * graphics, int sw, int sh)
-{
-	srand (1);
-	struct gui_position * pos = ctx->containers[0].pos;
-	struct gui_rectangle * rec = ctx->containers[0].rec;
-	uint32_t last = ctx->containers[0].last;
-	for (uint32_t i = 0; i < last; ++i)
-	{
-		float x = (pos[i].x / (float)sw) - 1.0f;
-		float y = (pos[i].y / (float)sh) - 1.0f;
-		float w = rec[i].w / (float)sw;
-		float h = rec[i].h / (float)sh;
-		vgraphics_drawrect1 (graphics, x, y, w, h, 2, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX);
-	}
-	//ctx->last = 0;
-}
-*/
+
 
 
 struct glx_texlist main_texlist = {};
@@ -68,24 +51,16 @@ struct vgraphics main_vgraphics2d = {.capacity = 1000000};
 struct gtext1_context main_textcontext = {0};
 GLint uniform_mvp;
 
-/*
-static void sys_cascade_transform (ecs_iter_t *it)
-{
-	position_4f32        *p1 = ecs_term (it, position_4f32, 1);//Parent
-	position_4f32        *p2 = ecs_term (it, position_4f32, 2);//Child
-	local_position_4f32  *p3 = ecs_term (it, local_position_4f32, 3);//Child
-	p2[i].x = p1->x + p3[i].x;
-	p2[i].y = p1->y + p3[i].y;
-}
-*/
+
 
 
 static void sys_cascade_transform (ecs_iter_t *it)
 {
-	position_4f32        *p1 = ecs_term (it, position_4f32, 1);//Parent
-	position_4f32        *p2 = ecs_term (it, position_4f32, 2);//Child
-	local_position_4f32  *p3 = ecs_term (it, local_position_4f32, 3);//Child
-	if (p1)
+	quad_4f32        *p = ecs_term (it, quad_4f32, 1);//Parent
+	quad_4f32        *c = ecs_term (it, quad_4f32, 2);//Child
+	world_quad_4f32  *w = ecs_term (it, world_quad_4f32, 3);//Child
+
+	if (p)
 	{
 		for (int i = 0; i < it->count; i ++)
 		{
@@ -98,20 +73,24 @@ static void sys_cascade_transform (ecs_iter_t *it)
 			*/
 
 
-			p2[i].x = p1[0].x + p3[i].x;
-			p2[i].y = p1[0].y + p3[i].y;
-			//char const * name = ecs_get_name(it->world, it->entities[i]);
-			//printf("C%i: %s transformed to (%f, %f)\n", i, name, wp[i].x, wp[i].y);
+			w[i].a.x = p[0].a.x + c[i].a.x;
+			w[i].a.y = p[0].a.y + c[i].a.y;
+			w[i].b.x = p[0].b.x + c[i].b.x;
+			w[i].b.y = p[0].b.y + c[i].b.y;
+			char const * name = ecs_get_name(it->world, it->entities[i]);
+			printf("C%i: %s transformed\n", i, name);
 		}
 	}
 	else
 	{
 		for (int i = 0; i < it->count; i ++)
 		{
-			p2[i].x = p3[i].x;
-			p2[i].y = p3[i].y;
-			//char const * name = ecs_get_name(it->world, it->entities[i]);
-			//printf("R%i: %s transformed to (%f, %f)\n",i, name,wp[i].x, wp[i].y);
+			w[i].a.x = c[i].a.x;
+			w[i].a.y = c[i].a.y;
+			w[i].b.x = c[i].b.x;
+			w[i].b.y = c[i].b.y;
+			char const * name = ecs_get_name(it->world, it->entities[i]);
+			printf("R%i: %s transformed\n", i, name);
 		}
 	}
 }
@@ -122,12 +101,15 @@ static void sys_quad (ecs_iter_t *it)
 	quad_4f32      *q = ecs_term (it, quad_4f32,      1); // Output
 	position_4f32  *p = ecs_term (it, position_4f32,  2); // Input
 	rectangle_2f32 *r = ecs_term (it, rectangle_2f32, 3); // Input
-	float cx = 0.5f;
-	float cy = -0.5f;
+	float kx = 0.5f;
+	float ky = 0.5f;
 	for (int i = 0; i < it->count; i++)
 	{
-		q[i].a = (position_2f32){p[i].x - (0.5f-cx)*r[i].w, p[i].y - (0.5f-cy)*r[i].h};
-		q[i].b = (position_2f32){p[i].x + (0.5f+cx)*r[i].w, p[i].y + (0.5f+cy)*r[i].h};
+		//q[i].a = (position_2f32){p[i].x - (0.5f+cx)*r[i].w, p[i].y + (0.5f+cy)*r[i].h};
+		//q[i].b = (position_2f32){p[i].x + (0.5f-cx)*r[i].w, p[i].y + (0.5f-cy)*r[i].h};
+
+		q[i].a = (position_2f32){p[i].x - (0.0f+kx)*r[i].w, p[i].y - (0.0f+ky)*r[i].h};
+		q[i].b = (position_2f32){p[i].x + (1.0f-kx)*r[i].w, p[i].y + (1.0f-ky)*r[i].h};
 	}
 }
 
@@ -135,7 +117,7 @@ static void sys_quad (ecs_iter_t *it)
 
 static void sys_draw_rectangle (ecs_iter_t *it)
 {
-	quad_4f32               *q = ecs_term (it, quad_4f32, 1);
+	world_quad_4f32         *q = ecs_term (it, world_quad_4f32, 1);
 	uvwh_4f32              *uv = ecs_term (it, uvwh_4f32, 2);
 	texture_layer          *tl = ecs_term (it, texture_layer, 3);
 	//opengl_vbo            *vbo = ecs_term (it, opengl_vbo, 5);//Shared
@@ -199,26 +181,6 @@ static void sys_draw_text (ecs_iter_t *it)
 
 
 
-static void gui_update (ecs_world_t *world)
-{
-	ecs_query_t *q = ecs_query_new (world, "PARENT:length_f32");
-	ecs_iter_t it = ecs_query_iter(q);
-	while (ecs_query_next(&it))
-	{
-		length_f32 *p = ecs_term (&it, length_f32, 1);
-		//length_f32 *v = ecs_term (&it, length_f32, 2);
-		for (int i = 0; i < it.count; i ++)
-		{
-			//p[i].x += v[i].x;
-			//p[i].y += v[i].y;
-			char const * name = ecs_get_name(world, it.entities[i]);
-			printf ("%s: %f\n", name, p[0].length);
-			//printf ("%s: %f %f\n", name, p[0].length, v[i].length);
-		}
-	}
-}
-
-
 
 
 
@@ -228,8 +190,8 @@ static ecs_entity_t gui_spawn_box
 {
 	ecs_entity_t e = ecs_set_name(world, 0, name);
 	ecs_set(world, e, quad_4f32, {{0, 0}, {0, 0}});
+	ecs_set(world, e, world_quad_4f32, {{0, 0}, {0, 0}});
 	ecs_set(world, e, position_4f32, {x, y, 0, 0});
-	ecs_set(world, e, local_position_4f32, {x, y, 0, 0});
 	ecs_set(world, e, rectangle_2f32, {w, h});
 	ecs_set(world, e, uvwh_4f32, {(float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX, 0.0f, 0.0f});
 	ecs_set(world, e, texture_layer, {TEXLAYER_RANDOM});
@@ -345,10 +307,10 @@ int main (int argc, char * argv[])
 
 
 	//ECS_SYSTEM (world, sys_transform1, EcsOnUpdate, position_4f32, local_position_4f32);
-	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, CASCADE:position_4f32, position_4f32, local_position_4f32);
 
 	ECS_SYSTEM (world, sys_quad, EcsOnUpdate, quad_4f32, position_4f32, rectangle_2f32);
-	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, quad_4f32, uvwh_4f32, texture_layer, draw_rectangle);
+	ECS_SYSTEM (world, sys_cascade_transform, EcsOnUpdate, quad_4f32(parent|cascade), quad_4f32, world_quad_4f32);
+	ECS_SYSTEM (world, sys_draw_rectangle, EcsOnUpdate, world_quad_4f32, uvwh_4f32, texture_layer, draw_rectangle);
 	ECS_SYSTEM (world, sys_draw_text, EcsOnUpdate, position_4f32, text_cstring, textsize_2f32, texture_layer, draw_text);
 
 
@@ -368,7 +330,7 @@ int main (int argc, char * argv[])
 
 
 
-
+	/*
 	{
 		ecs_entity_t e = ecs_set_name(world, 0, "fpsplot");
 		ecs_add(world, e, window_rectangle_2f32);//Singleton
@@ -378,6 +340,7 @@ int main (int argc, char * argv[])
 		ecs_set(world, e, uvwh_4f32, {0.0f, 0.0f, 1.0f, 1.0f});
 		ecs_set(world, e, texture_layer, {TEXLAYER_FPSPLOT});
 	}
+	*/
 
 
 
@@ -385,12 +348,12 @@ int main (int argc, char * argv[])
 
 
 
-	ecs_entity_t e0 = gui_spawn_box (world, "box1", 300, 300, 300, 300);
-	ecs_entity_t e1 = gui_spawn_box (world, "box2", 10, -10, 20, 400);
-	ecs_entity_t e2 = gui_spawn_box (world, "box3", 10, -10, 400, 40);
+	ecs_entity_t e0 = gui_spawn_box (world, "box1", 0, 0, 20, 20);
+	ecs_entity_t e1 = gui_spawn_box (world, "box2", 30, 30, 10, 10);
+	//ecs_entity_t e2 = gui_spawn_box (world, "box3", 300, 300, 400, 40);
 	ecs_entity_t e3 = gui_spawn_text (world, "text1", 0, 0, 50, 50, "Hellog\nWorgd!\nBagaGa");
 	ecs_add_pair(world, e1, EcsChildOf, e0);
-	ecs_add_pair(world, e2, EcsChildOf, e0);
+	//ecs_add_pair(world, e2, EcsChildOf, e0);
 	//ecs_add_pair(world, e3, EcsChildOf, e2);
 
 
