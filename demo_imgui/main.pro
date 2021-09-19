@@ -4,11 +4,12 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 DEFINES += __USE_MINGW_ANSI_STDIO=1
+DEFINES += CSC_SRCDIR=\\\"../demo_imgui/\\\"
 
-QMAKE_CFLAGS += -Wno-unused-function
-QMAKE_CFLAGS += -Wno-missing-braces
-QMAKE_CFLAGS += -Wno-unused-parameter
-QMAKE_CFLAGS += -Wno-missing-field-initializers
+QMAKE_CXXFLAGS += -Wno-unused-function
+QMAKE_CXXFLAGS += -Wno-missing-braces
+QMAKE_CXXFLAGS += -Wno-unused-parameter
+QMAKE_CXXFLAGS += -Wno-missing-field-initializers
 
 
 

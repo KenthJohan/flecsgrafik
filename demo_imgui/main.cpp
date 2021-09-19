@@ -3,11 +3,23 @@
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 #include "flecs.h"
+#include "glx_vertex_manager.h"
+#include "glx_texture_manager.h"
 //Shared libraries
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 
+#include "csc/csc_crossos.h"
+#include "csc/csc_basic.h"
+#include "csc/csc_assert.h"
+#include "csc/csc_malloc_file.h"
+#include "csc/csc_sdl_motion.h"
+#include "csc/csc_gcam.h"
+#include "csc/csc_gl.h"
+#include "csc/csc_math.h"
+#include "csc/csc_sdlglew.h"
+#include "csc/csc_xlog.h"
 
 struct glx_triangles
 {
@@ -58,6 +70,44 @@ int main(int, char**)
 
 	SDL_GL_MakeCurrent(window, gl_context);
 	SDL_GL_SetSwapInterval(1); // Enable vsync
+
+
+
+
+
+
+
+
+
+	struct glx_texlist main_texlist = {};
+	struct glx_vao main_vao = {.capacity = 1000000};
+	struct vgraphics main_vgraphics3d = {.capacity = 1000000};
+	GLint program = csc_gl_program_from_files1 (CSC_SRCDIR "shader.glfs;" CSC_SRCDIR "shader.glvs");
+	GLint uniform_tex = glGetUniformLocation (program, "tex0");
+	GLint uniform_mvp = glGetUniformLocation (program, "mvp");
+	ASSERT (uniform_tex >= 0);
+	ASSERT (uniform_mvp >= 0);
+	glUseProgram (program);
+	glUniform1i (uniform_tex, 0);
+	main_texlist.texarray[0].w = 512;
+	main_texlist.texarray[0].h = 512;
+	main_texlist.texarray[0].l = 3;
+	glx_texlist_setup (&main_texlist);
+	glx_texlist_gen_gradient (&main_texlist, 0, 2);
+	glx_vao_init (&main_vao);
+	vgraphics_init (&main_vgraphics3d);
+	struct csc_gcam cam;
+	csc_gcam_init (&cam);
+	cam.p.z = -3.0f;
+	const uint8_t * keyboard = SDL_GetKeyboardState (NULL);
+
+
+
+
+
+
+
+
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -164,6 +214,51 @@ int main(int, char**)
 
 
 
+
+
+
+		if(1)
+		{
+			//Control graphics camera
+			csc_sdl_motion_wasd (keyboard, &cam.d);
+			csc_sdl_motion_pyr (keyboard, &cam.pyr_delta);
+
+			int mdltx = 0, mdlty = 0;
+			SDL_GetRelativeMouseState(&mdltx, &mdlty);
+
+			if (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT))
+			{
+				//cam.pyr_delta.x = (float)mdlty * -0.1f;
+				//cam.pyr_delta.y = (float)mdltx * 0.1f;
+			}
+
+			if (SDL_GetModState() & KMOD_CAPS)
+			{
+				v3f32_mul (&cam.d, &cam.d, 0.001f);
+				v3f32_mul (&cam.pyr_delta, &cam.pyr_delta, 0.001f);
+			}
+			else
+			{
+				v3f32_mul (&cam.d, &cam.d, 0.01f);
+				v3f32_mul (&cam.pyr_delta, &cam.pyr_delta, 0.01f);
+			}
+
+
+			csc_gcam_update (&cam);
+		}
+
+		{
+			//Draw vertices from camera perspective
+			struct glx_vertex * vertices = main_vgraphics3d.v + main_vgraphics3d.last;
+			uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
+			primf32_make6_rectangle4_ab (vertices->xyzw.e, stride, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
+			primf32_make_rectangle4_xywh (vertices->uvl.e, stride, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
+			main_vgraphics3d.last += 6;
+
+			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
+			glBindTexture (GL_TEXTURE_2D_ARRAY, main_texlist.tex[0]);
+			glx_vao_flush (&main_vao, &main_vgraphics3d);
+		}
 
 		SDL_GL_SwapWindow(window);
 	}
