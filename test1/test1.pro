@@ -10,7 +10,7 @@ QMAKE_CFLAGS += -Wno-missing-braces
 QMAKE_CFLAGS += -Wno-unused-parameter
 QMAKE_CFLAGS += -Wno-missing-field-initializers
 
-SOURCES += test2.c
-SOURCES += ../flecs/flecs.c
+SOURCES += test3.c
+SOURCES += flecs.c
 
 INCLUDEPATH += ../flecs
