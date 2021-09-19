@@ -102,8 +102,31 @@ int main(int, char**)
 	const uint8_t * keyboard = SDL_GetKeyboardState (NULL);
 
 
+	unsigned int framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
-
+	const unsigned int SCR_WIDTH = 800;
+	const unsigned int SCR_HEIGHT = 600;
+	unsigned int textureColorbuffer;
+	glGenTextures(1, &textureColorbuffer);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+	// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
+	unsigned int rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT); // use a single renderbuffer object for both a depth AND stencil buffer.
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
+	// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		printf("ERROR::FRAMEBUFFER:: Framebuffer is not complete!");
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 
@@ -202,6 +225,14 @@ int main(int, char**)
 			ImGui::Text("Hello from another window!");
 			if (ImGui::Button("Close Me"))
 				show_another_window = false;
+
+			ImGui::BeginChild("GameRender");
+			// Get the size of the child (i.e. the whole draw size of the windows).
+			ImVec2 wsize = ImGui::GetWindowSize();
+			// Because I use the texture from OpenGL, I need to invert the V from the UV.
+			ImGui::Image((ImTextureID)textureColorbuffer, wsize, ImVec2(0, 1), ImVec2(1, 0));
+			ImGui::EndChild();
+
 			ImGui::End();
 		}
 
@@ -248,7 +279,11 @@ int main(int, char**)
 		}
 
 		{
-			//Draw vertices from camera perspective
+			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+			glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
+			// make sure we clear the framebuffer's content
+			glClearColor(0.1f, 0.3f, 0.1f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			struct glx_vertex * vertices = main_vgraphics3d.v + main_vgraphics3d.last;
 			uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
 			primf32_make6_rectangle4_ab (vertices->xyzw.e, stride, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
@@ -258,6 +293,7 @@ int main(int, char**)
 			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
 			glBindTexture (GL_TEXTURE_2D_ARRAY, main_texlist.tex[0]);
 			glx_vao_flush (&main_vao, &main_vgraphics3d);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 
 		SDL_GL_SwapWindow(window);
