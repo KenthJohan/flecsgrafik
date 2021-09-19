@@ -31,7 +31,7 @@ QMAKE_CFLAGS += -Wno-unused-parameter
 QMAKE_CFLAGS += -Wno-missing-field-initializers
 
 SOURCES += demo3.c
-SOURCES += ../flecs/flecs.c
+SOURCES += flecs.c
 
 INCLUDEPATH += C:/msys64/mingw64/include/freetype2
 
