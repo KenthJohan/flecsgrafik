@@ -10,3 +10,6 @@
 [submodule "demo_imgui/csc"]
 	path = demo_imgui/csc
 	url = https://github.com/KenthJohan/csc
+[submodule "demo_imgui2/csc"]
+	path = demo_imgui2/csc
+	url = https://github.com/KenthJohan/csc
