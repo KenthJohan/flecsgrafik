@@ -5,11 +5,6 @@
 #include "flecs.h"
 #include "glx_vertex_manager.h"
 #include "glx_texture_manager.h"
-//Shared libraries
-#include <stdio.h>
-#include <SDL2/SDL.h>
-#include <GL/glew.h>
-
 #include "csc/csc_crossos.h"
 #include "csc/csc_basic.h"
 #include "csc/csc_assert.h"
@@ -20,6 +15,13 @@
 #include "csc/csc_math.h"
 #include "csc/csc_sdlglew.h"
 #include "csc/csc_xlog.h"
+#include "world.h"
+//Shared libraries
+#include <stdio.h>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <enet/enet.h>
+
 
 struct glx_triangles
 {
@@ -27,8 +29,17 @@ struct glx_triangles
 };
 
 
+
+
+
+
+
+
+
+
 int main(int, char**)
 {
+	ecs_world_t * world = ecs_init();
 
 	{
 		SDL_version compiled;
@@ -44,6 +55,16 @@ int main(int, char**)
 		printf("Error: %s\n", SDL_GetError());
 		return -1;
 	}
+
+	if (enet_initialize () != 0)
+	{
+		fprintf (stderr, "An error occurred while initializing ENet.\n");
+		return EXIT_FAILURE;
+	}
+
+
+	ENetHost * server = server_connect();
+
 
 	const char* glsl_version = "#version 130";
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
@@ -163,9 +184,25 @@ int main(int, char**)
 	//IM_ASSERT(font != NULL);
 
 	// Our state
-	bool show_demo_window = true;
+	bool show_demo_window = false;
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	v3f32 v = {{0.0f, 0.0f, 0.0f}};
+
+
+	/*
+	{
+		ecs_system_desc_t sys =
+		{
+		.entity = { .name = "Move", .add = {EcsOnUpdate} },
+		.query.filter.terms = {{comp_v3f32}},
+		.callback = Move,
+		};
+		ecs_system_init(world, &sys);
+	}
+	*/
+
+
 
 	// Main loop
 	bool done = false;
@@ -197,23 +234,16 @@ int main(int, char**)
 
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
 		{
-			static float f = 0.0f;
-			static int counter = 0;
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+			ImGui::Begin("Hello, world!");
+			ImGui::Checkbox("Demo Window", &show_demo_window);
 			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
+			for(int i = 0; i < 5; ++i)
+			{
+				char buf[100];
+				::snprintf(buf, 100, "input float3 (%i)", i);
+				ImGui::InputFloat3(buf, v.e);
+			}
+			receive(world, server);
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			ImGui::End();
 		}
@@ -274,16 +304,17 @@ int main(int, char**)
 				v3f32_mul (&cam.pyr_delta, &cam.pyr_delta, 0.01f);
 			}
 
-
+			cam.w = io.DisplaySize.x;
+			cam.h = io.DisplaySize.y;
 			csc_gcam_update (&cam);
 		}
 
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-			glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
+			glBindFramebuffer (GL_FRAMEBUFFER, framebuffer);
+			glEnable (GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 			// make sure we clear the framebuffer's content
-			glClearColor(0.1f, 0.3f, 0.1f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClearColor (0.1f, 0.3f, 0.1f, 1.0f);
+			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			struct glx_vertex * vertices = main_vgraphics3d.v + main_vgraphics3d.last;
 			uint32_t stride = sizeof(struct glx_vertex) / sizeof(float);
 			primf32_make6_rectangle4_ab (vertices->xyzw.e, stride, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
@@ -293,7 +324,7 @@ int main(int, char**)
 			glUniformMatrix4fv (uniform_mvp, 1, GL_FALSE, cam.mvp.m);
 			glBindTexture (GL_TEXTURE_2D_ARRAY, main_texlist.tex[0]);
 			glx_vao_flush (&main_vao, &main_vgraphics3d);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer (GL_FRAMEBUFFER, 0);
 		}
 
 		SDL_GL_SwapWindow(window);

@@ -4,18 +4,17 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 DEFINES += __USE_MINGW_ANSI_STDIO=1
-DEFINES += CSC_SRCDIR=\\\"../demo_imgui/\\\"
+DEFINES += CSC_SRCDIR=\\\"../demo_imgui2/\\\"
 
-QMAKE_CXXFLAGS += -std=c++11
-QMAKE_CXXFLAGS += -Wno-unused-function
-QMAKE_CXXFLAGS += -Wno-missing-braces
-QMAKE_CXXFLAGS += -Wno-unused-parameter
-QMAKE_CXXFLAGS += -Wno-missing-field-initializers
-QMAKE_CXXFLAGS += -fno-permissive
+QMAKE_CFLAGS += -Wno-unused-function
+QMAKE_CFLAGS += -Wno-missing-braces
+QMAKE_CFLAGS += -Wno-unused-parameter
+QMAKE_CFLAGS += -Wno-missing-field-initializers
 
 
 
-SOURCES += main.cpp
+SOURCES += \
+	client.c
 SOURCES += libs/flecs.c
 SOURCES += libs/imgui.cpp
 SOURCES += libs/imgui_draw.cpp
